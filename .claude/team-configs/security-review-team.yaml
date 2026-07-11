@@ -1,0 +1,11 @@
+# Plain YAML DATA — not a Claude Code primitive. See feature-team.yaml's header comment.
+name: security-review-team
+description: Typical taxonomy sections and rubrics for a security-review-flavored request.
+  Per judge-router.md's own rules, security-sensitive stages ALWAYS route cross-vendor
+  (judge-cross-vendor / Codex), regardless of this file — this file only informs which
+  producer agents and rubrics typically apply, not the judge routing decision itself.
+typical_sections: ["4.9", "4.7", "4.15"]
+rubrics:
+  "4.9": owasp-asvs.md
+  "4.7": openapi-3.1.md
+force_cross_vendor_judging: true

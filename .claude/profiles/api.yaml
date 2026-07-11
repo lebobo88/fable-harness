@@ -1,0 +1,10 @@
+name: api
+description: An API/platform product profile (no significant UI). Read by profile-loader.md.
+detect_signals:
+  - "openapi.yaml/asyncapi.yaml present at repo root"
+  - "no frontend framework dependency found"
+posture:
+  ui_relevant_agents_active: false     # designer/design-system-curator/visual-regression-runner/browser-validator skip (no-op)
+  contract_rubric: openapi-3.1.md
+  judge_strictness: standard
+required_taxonomy_emphasis: ["4.7", "4.9", "4.10"]

@@ -1,0 +1,10 @@
+# Plain YAML DATA — not a Claude Code primitive. See feature-team.yaml's header comment.
+name: bug-fix-team
+description: Typical taxonomy sections and rubrics for a bug-fix request. spec-author covers
+  the repro spec (dual-use mode per its own frontmatter description); test-strategist covers
+  the regression-test requirement.
+typical_sections: ["4.3", "4.8", "4.10", "4.13"]
+rubrics:
+  "4.3": rfc-2119.md
+  "4.10": owasp-asvs.md
+best_of_n_on_major_scope: 3

@@ -1,0 +1,14 @@
+# Plain YAML DATA — not a Claude Code primitive. Read by .claude/workflows/run.js (or a
+# future variant) as a reference for which taxonomy sections a "feature" request typically
+# touches and which rubrics apply. The actual orchestration logic is in run.js; this file is
+# just a named, reusable configuration a workflow script (or a human) can consult.
+name: feature-team
+description: Typical taxonomy sections and rubrics for a new-feature request.
+typical_sections: ["4.3", "4.4", "4.6", "4.7", "4.8", "4.9", "4.10", "4.13"]
+rubrics:
+  "4.3": rfc-2119.md
+  "4.6": c4.md
+  "4.7": openapi-3.1.md
+  "4.9": owasp-asvs.md
+  "4.4": wcag-2.2.md
+best_of_n_on_major_scope: 3

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>«PLAN TITLE» — plan</title>
+<!--
+  FABLE-HARNESS planf3-style plan template (LITE / everyday /plan, Sonnet).
+  Lighter than plan-template.html: keeps HTML + status chips + per-phase testing loop
+  + optional figures, but drops the metadata <details> ceremony and Questionables.
+  Image slots:  <!~~ {{...IMAGE: <basename> | <subject sentence>}} ~~>  (real HTML comment).
+  Use plan-images.ps1 extract / apply exactly as for the full template.
+  Self-contained: system fonts only, no CDNs.
+-->
+<style>
+/* ============ FABLE plan design system (shared with plan-template.html) ============ */
+:root {
+  color-scheme: light dark;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --fs-body: 15.5px; --lh-body: 1.62;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 40px;
+  --radius: 10px; --radius-sm: 6px; --measure: 60rem;
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #dfe3e8;
+  --text: #1c2530; --text-muted: #5b6673; --accent: #2f6fed; --accent-soft: #e7f0ff;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10);
+  --st-idle-bd: #c3cad3; --st-idle-fg: #5b6673; --st-idle-bg: #eef1f4;
+  --st-wip-bd:  #d9a406; --st-wip-fg:  #7a5a00; --st-wip-bg:  #fff4d6;
+  --st-done-bd: #2f9e5b; --st-done-fg: #17663a; --st-done-bg: #dcf5e6;
+  --st-fail-bd: #d64545; --st-fail-fg: #8f2020; --st-fail-bg: #fbe0e0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419; --surface: #161c24; --surface-2: #1d252f; --border: #2a3542;
+    --text: #e6ebf2; --text-muted: #9aa7b6; --accent: #6ea0ff; --accent-soft: #17233b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.35);
+    --st-idle-bd:#3a4552; --st-idle-fg:#9aa7b6; --st-idle-bg:#1d252f;
+    --st-wip-bd:#8a6d12; --st-wip-fg:#f0c650; --st-wip-bg:#2a2410;
+    --st-done-bd:#2f7d4f; --st-done-fg:#7fe0a6; --st-done-bg:#122a1c;
+    --st-fail-bd:#8f3636; --st-fail-fg:#f2a5a5; --st-fail-bg:#2a1414;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0f1419; --surface:#161c24; --surface-2:#1d252f; --border:#2a3542;
+  --text:#e6ebf2; --text-muted:#9aa7b6; --accent:#6ea0ff; --accent-soft:#17233b;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);
+  --st-idle-bd:#3a4552;--st-idle-fg:#9aa7b6;--st-idle-bg:#1d252f;
+  --st-wip-bd:#8a6d12;--st-wip-fg:#f0c650;--st-wip-bg:#2a2410;
+  --st-done-bd:#2f7d4f;--st-done-fg:#7fe0a6;--st-done-bg:#122a1c;
+  --st-fail-bd:#8f3636;--st-fail-fg:#f2a5a5;--st-fail-bg:#2a1414;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-size: var(--fs-body); line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased; }
+.wrap { max-width: var(--measure); margin: 0 auto; padding: var(--sp-6) var(--sp-5) 25vh; }
+header.plan-head { border-bottom: 2px solid var(--border); padding-bottom: var(--sp-4); margin-bottom: var(--sp-5); }
+header.plan-head h1 { margin: 0 0 var(--sp-2); font-size: 1.7rem; line-height: 1.2; letter-spacing: -0.01em; }
+.subtitle { color: var(--text-muted); margin: 0; }
+h2 { font-size: 1.25rem; margin: var(--sp-6) 0 var(--sp-3); padding-bottom: var(--sp-2);
+     border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; margin: var(--sp-5) 0 var(--sp-2); }
+h4 { font-size: .95rem; margin: var(--sp-4) 0 var(--sp-1); color: var(--text-muted); }
+a { color: var(--accent); }
+code, kbd, pre { font-family: var(--font-mono); }
+.legend { color: var(--text-muted); font-size: .9em; }
+.phase { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+         box-shadow: var(--shadow); padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) 0; }
+.phase > h3 { margin-top: 0; display: flex; align-items: center; gap: var(--sp-3); }
+.checklist { list-style: none; padding: 0; margin: var(--sp-3) 0; }
+.checklist li { padding: var(--sp-1) 0; display: flex; gap: var(--sp-3); align-items: baseline; }
+code.status { font-size: .78em; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+  border: 1px solid var(--st-idle-bd); color: var(--st-idle-fg); background: var(--st-idle-bg); white-space: nowrap; }
+code.status[data-st="wip"]  { border-color: var(--st-wip-bd);  color: var(--st-wip-fg);  background: var(--st-wip-bg); }
+code.status[data-st="x"]    { border-color: var(--st-done-bd); color: var(--st-done-fg); background: var(--st-done-bg); }
+code.status[data-st="done"] { border-color: var(--st-done-bd); color: var(--st-done-fg); background: var(--st-done-bg); }
+code.status[data-st="f"]    { border-color: var(--st-fail-bd); color: var(--st-fail-fg); background: var(--st-fail-bg); }
+figure { margin: var(--sp-4) 0; border: 1px solid var(--border); border-radius: var(--radius);
+         overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+figure img { display: block; width: 100%; height: auto; }
+figure figcaption { padding: var(--sp-3) var(--sp-4); color: var(--text-muted); font-size: .9em;
+                    border-top: 1px solid var(--border); background: var(--surface-2); }
+.fig-pending { display: grid; place-items: center; gap: var(--sp-2); aspect-ratio: 1536 / 1024; padding: var(--sp-5);
+  background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 14px, var(--surface) 14px, var(--surface) 28px);
+  color: var(--text-muted); text-align: center; }
+.fig-pending b { color: var(--text); font-weight: 600; }
+.fig-pending .hint { font-family: var(--font-mono); font-size: .8em; }
+figure:has(img) .fig-pending { display: none; }
+@media print {
+  :root { --bg: #fff; --surface: #fff; --shadow: none; }
+  body { color: #000; } .wrap { padding: 0; max-width: none; }
+  .phase, figure { break-inside: avoid; } .fig-pending { border: 1px dashed #999; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="plan-head">
+  <h1>«Plan title»</h1>
+  <p class="subtitle">Created «date» · «one-line outcome»</p>
+</header>
+
+<p class="legend">Status markers:
+  <code class="status">[]</code> idle ·
+  <code class="status" data-st="wip">[wip]</code> in progress ·
+  <code class="status" data-st="x">[x]</code> done ·
+  <code class="status" data-st="f">[f]</code> failed</p>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>«what this plan does, the approach, key files touched»</p>
+  <figure>
+    <!-- {{...IMAGE: hero | the change's end-state as one simple diagram}} -->
+    <div class="fig-pending"><b>Image pending</b><span class="hint">hero.png — see «slug».image-prompts.md (optional for lite plans)</span></div>
+    <figcaption>«overview caption»</figcaption>
+  </figure>
+</section>
+
+<section id="phases">
+  <h2>Phases</h2>
+
+  <!-- ===== repeat per phase; bump the number + basename ===== -->
+  <div class="phase">
+    <h3>Phase 1 — «name» <code class="status">[]</code></h3>
+    <p>«what this phase does, files touched, approach»</p>
+    <h4>Testing strategy</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> «check 1»</li>
+      <li><code class="status">[]</code> «check 2»</li>
+    </ul>
+    <p class="legend">Don't advance until every check passes. If a check can't be made to pass after
+      reasonable effort, mark the phase <code class="status" data-st="f">[f]</code> and say why instead of looping.</p>
+  </div>
+  <!-- ===== end phase block ===== -->
+
+</section>
+
+<section id="notes">
+  <h2>Notes</h2>
+  <p>«free-form context, open questions, anything that doesn't fit above»</p>
+</section>
+
+</div>
+</body>
+</html>

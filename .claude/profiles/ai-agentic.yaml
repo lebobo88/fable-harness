@@ -1,0 +1,9 @@
+name: ai-agentic
+description: A product profile whose own features include AI/agentic behavior (distinct from FABLE-HARNESS's own internals, which are governed directly by CONSTITUTION.md). Read by profile-loader.md.
+detect_signals:
+  - "references to LLM/agent/prompt/eval in the calling project's own source or specs"
+posture:
+  ui_relevant_agents_active: false     # set true too if the project also has a UI; profiles can combine via project override
+  ai_controls_emphasis: true           # ai-controls-author engages more heavily
+  judge_strictness: enterprise         # per judge-router.md: enterprise profile always routes cross-vendor
+required_taxonomy_emphasis: ["4.15", "4.9"]

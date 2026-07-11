@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/claude-code-settings.json",
+  "availableModels": ["sonnet", "opus", "haiku"],
+  "permissions": {
+    "deny": [
+      "Read(./.env*)",
+      "Read(./**/*secret*)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git clean -fd*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-attest.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-whitelist.ps1\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "prompt",
+            "model": "haiku",
+            "prompt": "You are a narrow quality gate for FABLE-HARNESS. Inspect the pending file write in the tool input. Respond exactly 'BLOCK: <reason>' ONLY if it contains obvious placeholder/AI-tell debris: 'TODO: implement', lorem ipsum, 'as an AI', an entire function body replaced by a comment, or a secret literal (API key/password/token). Otherwise respond exactly 'ALLOW'. Do not nitpick style or naming.",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/fable-token-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-verify-gate.ps1\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/handoff-notify.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

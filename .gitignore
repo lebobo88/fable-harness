@@ -1,0 +1,37 @@
+# FABLE-HARNESS run-state (replaces the MCP SQLite ledger pattern from sibling repos)
+.fable/
+*.token
+
+# Personal, machine-local settings overrides (telemetry toggle, local model tweaks)
+.claude/settings.local.json
+
+# Claude Code worktrees created via --worktree
+.claude/worktrees/
+
+# Sibling project — a SEPARATE, independently git-init'd repo. Must never nest
+# inside FABLE-HARNESS's own tree (see README "Sibling projects" + Phase 0).
+mythic-proportion/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / web tooling
+node_modules/
+web/dist/
+
+# Secrets
+.env
+.env.*
+*.key
