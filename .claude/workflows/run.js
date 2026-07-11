@@ -120,6 +120,23 @@ if (!resolvedArgs || typeof resolvedArgs !== 'object' || !resolvedArgs.run_id ||
 const runId = resolvedArgs.run_id
 const request = resolvedArgs.request
 
+// Canonical stage-state schema init instruction (single source of truth: reflexion-coach.md,
+// verify-gate/SKILL.md, stop-verify-gate.ps1). run.js itself has NO filesystem access, so the
+// stages/<stage>.json file is initialized by the (typed, Write-capable) producer at generate
+// time via this instruction. Keep the JSON byte-identical to every other reader/writer of it -
+// the Stop hook keys turn-gating off `last_verdict`, so a stage that never wrote this file was
+// invisible to verification and produced the false-negative reject this fix closes.
+function stageStateInitInstruction(stage) {
+  return (
+    `Stage-state bookkeeping - do this FIRST, before your main work: if the file ` +
+    `.fable/${runId}/stages/${stage}.json does NOT already exist, create it with EXACTLY this ` +
+    `content and no extra or renamed fields: ` +
+    `{"stage": "${stage}", "verify_loops": 0, "reflexion_used": false, "last_verdict": null, "history": []} ` +
+    `- if it already exists, leave it exactly as-is. This is the canonical stage-state schema ` +
+    `shared verbatim with reflexion-coach, verify-gate and the Stop hook; it must stay byte-identical.`
+  )
+}
+
 phase('Setup')
 log(`FABLE run ${runId}: triage -> profile -> taxonomy for: ${request}`)
 
@@ -150,12 +167,12 @@ async function judgeStage(stage, section, producerSummary) {
 
   if (route.route === 'cross-vendor') {
     return agent(
-      `Run the Codex Rubber-Duck Bridge (.claude/hooks/lib/codex-review.ps1) for stage=${stage}, run_id=${runId}. Producer summary: ${producerSummary}`,
+      `Run the Codex Rubber-Duck Bridge (.claude/hooks/lib/codex-review.ps1) for stage=${stage}, run_id=${runId}. Producer summary: ${producerSummary}. In addition to your usual .fable/${runId}/verdicts/${stage}-codex.json write, ALSO mirror your normalized verdict to the uniform per-stage file .fable/${runId}/verdicts/${stage}.json in the shape {"verdict": "pass|pass-with-notes|reject", "issues": ["..."], "source": "codex"} so reflexion-coach and the terminal stage-state recorder find one canonical verdict path for every judged stage.`,
       { agentType: 'judge-cross-vendor', phase: 'Judge', label: `judge:${stage}`, schema: VERDICT_SCHEMA }
     )
   }
   return agent(
-    `Judge the ${stage} artifact for run_id=${runId} at the next model tier up (Haiku output -> Sonnet judge; Sonnet -> Opus). Producer summary: ${producerSummary}. Emit exactly one of pass/pass-with-notes/reject per CONSTITUTION N4.`,
+    `Judge the ${stage} artifact for run_id=${runId} at the next model tier up (Haiku output -> Sonnet judge; Sonnet -> Opus). Producer summary: ${producerSummary}. Emit exactly one of pass/pass-with-notes/reject per CONSTITUTION N4, and PERSIST that verdict to .fable/${runId}/verdicts/${stage}.json in the shape {"verdict": "pass|pass-with-notes|reject", "issues": ["..."], "source": "same-tier"} before returning. reflexion-coach and the stage-state recorder read this file, so it MUST exist on disk for every judged stage - on pass exactly as much as on reject.`,
     { phase: 'Judge', label: `judge:${stage}`, schema: VERDICT_SCHEMA }
   )
 }
@@ -163,20 +180,41 @@ async function judgeStage(stage, section, producerSummary) {
 async function runStage(section) {
   const producerType = SECTION_AGENT[section] || 'docs-author'
   const stage = `${section}-${producerType}`
+  const isCodeStage = section === '4.8' // engineer: real committed code, not a .md artifact
 
-  let producerResult = await agent(
-    `Produce the ${section} artifact for run_id=${runId}, stage=${stage}. Request: ${request}. Write to .fable/${runId}/artifacts/ per artifact-conventions.`,
-    { agentType: producerType, phase: 'Generate', label: `generate:${stage}` }
-  )
+  // ---- Generate. The producer dispatch ALSO initializes .fable/<run_id>/stages/<stage>.json
+  // (agent-mediated, since run.js has no filesystem access) so EVERY stage - passing or not -
+  // has its stage-state file from the start, not only on the reject path via reflexion-coach.
+  // For code-building stages (4.8 engineer) the real output is committed code, so we additionally
+  // require a short summary artifact so verification/missability have on-disk evidence to point at.
+  let producePrompt =
+    `Produce the ${section} artifact for run_id=${runId}, stage=${stage}. Request: ${request}. ` +
+    `Write to .fable/${runId}/artifacts/ per artifact-conventions. ` +
+    stageStateInitInstruction(stage)
+  if (isCodeStage) {
+    producePrompt +=
+      ` This is a CODE-BUILDING stage: after you commit your implementation, ALSO write a short ` +
+      `summary artifact to .fable/${runId}/artifacts/${stage}-summary.md recording the commit SHA, ` +
+      `the exact list of files changed, and the exact build/test commands (naming the runner, e.g. ` +
+      `vite/vitest/pytest/npm) needed to reproduce a green build. This summary is the on-disk ` +
+      `evidence the verifier and missability-inspector use to confirm code work that lives in the ` +
+      `project tree rather than as a descriptive .md artifact - do not skip it even on a clean build.`
+  }
+
+  let producerResult = await agent(producePrompt, {
+    agentType: producerType,
+    phase: 'Generate',
+    label: `generate:${stage}`,
+  })
 
   let verdict = await judgeStage(stage, section, producerResult)
 
-  // ---- Reflexion x1: on reject, dispatch reflexion-coach (the one Write-capable step in
-  // this loop - it creates/updates .fable/<run_id>/stages/<stage>.json, since the read-only
-  // `verifier` agent deliberately never writes it). At most one retry, ever, per stage.
+  // ---- Reflexion x1: on reject, dispatch reflexion-coach (the Write-capable stage-state steward
+  // - it updates .fable/<run_id>/stages/<stage>.json, since the read-only `verifier` agent
+  // deliberately never writes it). At most one retry, ever, per stage.
   if (verdict.verdict === 'reject') {
     const coach = await agent(
-      `Stage ${stage} (run_id=${runId}, section=${section}) received a reject verdict. Read or create .fable/${runId}/stages/${stage}.json per your canonical schema, apply the Reflexion x1 + 3-loop policy, and either compose a retry prompt or escalate. Rejecting verdict: ${JSON.stringify(verdict)}. Original producer dispatch: Produce the ${section} artifact for run_id=${runId}, stage=${stage}. Request: ${request}.`,
+      `Stage ${stage} (run_id=${runId}, section=${section}) received a reject verdict. Read .fable/${runId}/stages/${stage}.json (initialized by the producer at generate time; create it per your canonical schema only if it is somehow absent) and the rejecting verdict at .fable/${runId}/verdicts/${stage}.json (or ${stage}-codex.json). Apply the Reflexion x1 + 3-loop policy, and either compose a retry prompt or escalate. Rejecting verdict: ${JSON.stringify(verdict)}. Original producer dispatch: Produce the ${section} artifact for run_id=${runId}, stage=${stage}. Request: ${request}.`,
       { agentType: 'reflexion-coach', phase: 'Verify', label: `reflexion:${stage}`, schema: REFLEXION_SCHEMA }
     )
 
@@ -194,9 +232,43 @@ async function runStage(section) {
     // designed - no separate escalation branching needed here.
   }
 
+  // ---- Verify (independent, read-only). The verifier re-derives from disk and NEVER writes the
+  // stage-state file (its entire value is that it cannot alter what it inspects). For code stages
+  // it must re-derive from git + build + tests, not only from a .md artifact under artifacts/.
   const verifyResult = await agent(
-    `Run verify-gate for stage=${stage}, run_id=${runId}. Latest verdict: ${verdict.verdict}. The stage-state file .fable/${runId}/stages/${stage}.json should already exist (created by reflexion-coach on the first reject, if any occurred) - read it, do not assume it is missing. Enforce Reflexion x1 and the 3-loop escalation ceiling per CONSTITUTION N3.`,
+    `Run verify-gate for stage=${stage}, run_id=${runId}. Latest judge verdict: ${verdict.verdict}. ` +
+      `The stage-state file .fable/${runId}/stages/${stage}.json was initialized by the producer at ` +
+      `generate time and updated by any Reflexion retry - read it, do not assume it is missing. Read ` +
+      `the persisted judge verdict at .fable/${runId}/verdicts/${stage}.json (or ${stage}-codex.json). ` +
+      (isCodeStage
+        ? `This is a CODE-BUILDING stage: its real output is committed code in the project tree plus ` +
+          `.fable/${runId}/artifacts/${stage}-summary.md, NOT a descriptive .md artifact. Re-derive its ` +
+          `claims from git log / git show for the commit SHA in that summary and by running the summary's ` +
+          `build/test commands in read-only/report mode (the project's vite build, vitest, pytest) - do ` +
+          `NOT reject merely because there is no prose .md artifact for this section. `
+        : ``) +
+      `Enforce Reflexion x1 and the 3-loop escalation ceiling per CONSTITUTION N3. You are READ-ONLY: ` +
+      `do not write the stage-state file yourself.`,
     { agentType: 'verifier', phase: 'Verify', label: `verify:${stage}`, schema: VERDICT_SCHEMA }
+  )
+
+  // ---- Terminal stage-state write. Because `verifier` is read-only, the authoritative verify
+  // verdict is stamped into stages/<stage>.json by a separate, explicitly-dispatched Write-capable
+  // step: reflexion-coach in RECORD-ONLY mode (the stage-state steward that owns this schema). This
+  // is what makes /run's self-report truthful: without it a passing stage left last_verdict=null
+  // (or no file at all), so the Stop hook, missability and finalize all saw an unverified stage and
+  // fail-closed to a spurious reject/"surfaced". Record-only: it does NOT compose a retry and does
+  // NOT touch reflexion_used - it only records the terminal verify outcome.
+  await agent(
+    `RECORD-ONLY stage-state update for stage=${stage}, run_id=${runId}. Do NOT compose a retry, do ` +
+      `NOT change reflexion_used, and do NOT apply the reject-retry decision logic - this is a pure ` +
+      `terminal record. Read .fable/${runId}/stages/${stage}.json (canonical schema) and update it to ` +
+      `reflect the just-completed independent verification: set "last_verdict" to "${verifyResult.verdict}", ` +
+      `increment "verify_loops" by 1 for this verify attempt, and append ` +
+      `{"verdict": "${verifyResult.verdict}", "notes": "verifier terminal verdict", "phase": "verify"} to ` +
+      `"history". Preserve every other existing field and all prior history entries unchanged (N9). Return ` +
+      `the updated last_verdict and verify_loops so the caller can confirm the on-disk state matches.`,
+    { agentType: 'reflexion-coach', phase: 'Verify', label: `record:${stage}` }
   )
 
   return { section, stage, agentType: producerType, verdict: verifyResult.verdict }
@@ -223,7 +295,15 @@ if (triage.scope === 'major' && sectionsToRun.includes('4.8')) {
 // ---- Missability gate before finalize.
 phase('Missability')
 const missability = await agent(
-  `Run the 20-item missability checklist against run_id=${runId}'s archived artifacts before finalize.`,
+  `Run the 20-item missability checklist against run_id=${runId}'s archived artifacts before finalize. ` +
+    `The run directory is .fable/${runId}/ resolved from the FABLE-HARNESS project root (CLAUDE_PROJECT_DIR / repo root), ` +
+    `NOT from any transient cwd. Both .fable/${runId}/taxonomy_map.json and the .fable/${runId}/artifacts/ directory DO ` +
+    `exist for this run: FIRST Glob .fable/${runId}/artifacts/* to enumerate the actual artifact files and read ` +
+    `.fable/${runId}/taxonomy_map.json's mapped sections, THEN score - never report either as absent without having ` +
+    `actually listed the directory (a "no artifacts/ directory exists" claim when files are present is itself a defect ` +
+    `per N4). Note that code-building sections (e.g. 4.8 engineer) are represented on disk by a <section>-<agent>-summary.md ` +
+    `plus committed code, not a full prose .md - treat that summary as valid coverage evidence for that section. Always ` +
+    `write .fable/${runId}/missability-report.json on both outcomes.`,
   { agentType: 'missability-inspector', phase: 'Missability', label: 'missability', schema: VERDICT_SCHEMA }
 )
 
