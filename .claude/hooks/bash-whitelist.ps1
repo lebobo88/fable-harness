@@ -23,7 +23,7 @@ try {
         'git', 'gh', 'ls', 'dir', 'cat', 'type', 'more', 'less', 'head', 'tail', 'wc',
         'echo', 'pwd', 'cd', 'mkdir', 'touch', 'diff', 'find', 'grep', 'rg', 'awk', 'sed',
         'node', 'npm', 'npx', 'pnpm', 'yarn', 'python', 'python3', 'pip', 'pip3', 'pytest',
-        'pwsh', 'powershell', 'sha256sum', 'codex', 'gemini', 'jq', 'wc', 'tar', 'zip',
+        'pwsh', 'powershell', 'sha256sum', 'codex', 'gemini', 'agy', 'jq', 'wc', 'tar', 'zip',
         'unzip', 'which', 'where',
         # Shell control-flow keywords, not commands - the naive splitter (see
         # normalize-command.ps1) breaks `if [ ... ]; then` etc. into separate subcommands at

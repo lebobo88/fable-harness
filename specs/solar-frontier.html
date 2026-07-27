@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOLAR FRONTIER — implementation plan</title>
+<!--
+  FABLE-HARNESS planf3-style plan template (full / plan-deep).
+  Fill every «placeholder». Repeat the .phase block per phase.
+  Image slots use:  <!~~ {{...IMAGE: <basename> | <subject sentence>}} ~~>
+  (written literally as an HTML comment; see .claude/skills/lib/README.md).
+  Run  plan-images.ps1 extract <this-file>  to emit the copy-paste prompt sheet,
+  and  plan-images.ps1 apply   <this-file>  once PNGs exist in the sibling «slug»/ folder.
+  Self-contained: system fonts only, no CDNs, no external assets.
+-->
+<style>
+/* ============ FABLE plan design system (planf3-style, garland squad) ============ */
+:root {
+  color-scheme: light dark;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --fs-body: 15.5px; --lh-body: 1.62;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 40px;
+  --radius: 10px; --radius-sm: 6px; --measure: 60rem;
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #dfe3e8;
+  --text: #1c2530; --text-muted: #5b6673; --accent: #2f6fed; --accent-soft: #e7f0ff;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10);
+  --st-idle-bd: #c3cad3; --st-idle-fg: #5b6673; --st-idle-bg: #eef1f4;
+  --st-wip-bd:  #d9a406; --st-wip-fg:  #7a5a00; --st-wip-bg:  #fff4d6;
+  --st-done-bd: #2f9e5b; --st-done-fg: #17663a; --st-done-bg: #dcf5e6;
+  --st-fail-bd: #d64545; --st-fail-fg: #8f2020; --st-fail-bg: #fbe0e0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419; --surface: #161c24; --surface-2: #1d252f; --border: #2a3542;
+    --text: #e6ebf2; --text-muted: #9aa7b6; --accent: #6ea0ff; --accent-soft: #17233b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.35);
+    --st-idle-bd:#3a4552; --st-idle-fg:#9aa7b6; --st-idle-bg:#1d252f;
+    --st-wip-bd:#8a6d12; --st-wip-fg:#f0c650; --st-wip-bg:#2a2410;
+    --st-done-bd:#2f7d4f; --st-done-fg:#7fe0a6; --st-done-bg:#122a1c;
+    --st-fail-bd:#8f3636; --st-fail-fg:#f2a5a5; --st-fail-bg:#2a1414;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0f1419; --surface:#161c24; --surface-2:#1d252f; --border:#2a3542;
+  --text:#e6ebf2; --text-muted:#9aa7b6; --accent:#6ea0ff; --accent-soft:#17233b;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);
+  --st-idle-bd:#3a4552;--st-idle-fg:#9aa7b6;--st-idle-bg:#1d252f;
+  --st-wip-bd:#8a6d12;--st-wip-fg:#f0c650;--st-wip-bg:#2a2410;
+  --st-done-bd:#2f7d4f;--st-done-fg:#7fe0a6;--st-done-bg:#122a1c;
+  --st-fail-bd:#8f3636;--st-fail-fg:#f2a5a5;--st-fail-bg:#2a1414;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-size: var(--fs-body); line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased; }
+.wrap { max-width: var(--measure); margin: 0 auto; padding: var(--sp-6) var(--sp-5) 25vh; }
+header.plan-head { border-bottom: 2px solid var(--border); padding-bottom: var(--sp-4); margin-bottom: var(--sp-5); }
+header.plan-head h1 { margin: 0 0 var(--sp-2); font-size: 1.9rem; line-height: 1.2; letter-spacing: -0.01em; }
+.subtitle { color: var(--text-muted); margin: 0; }
+h2 { font-size: 1.3rem; margin: var(--sp-6) 0 var(--sp-3); padding-bottom: var(--sp-2);
+     border-bottom: 1px solid var(--border); letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; margin: var(--sp-5) 0 var(--sp-2); }
+h4 { font-size: .95rem; margin: var(--sp-4) 0 var(--sp-1); color: var(--text-muted); }
+a { color: var(--accent); }
+code, kbd, pre { font-family: var(--font-mono); }
+pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: var(--sp-3); overflow-x: auto; font-size: .86em; }
+.legend { color: var(--text-muted); font-size: .9em; }
+details.meta, details.amend { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--sp-2) var(--sp-4); margin: var(--sp-4) 0; }
+details.meta > summary, details.amend > summary { cursor: pointer; font-weight: 600; color: var(--text-muted);
+  list-style: none; padding: var(--sp-2) 0; }
+details.meta > summary::-webkit-details-marker, details.amend > summary::-webkit-details-marker { display: none; }
+details.meta > summary::before, details.amend > summary::before { content: "▸ "; color: var(--accent); }
+details[open].meta > summary::before, details[open].amend > summary::before { content: "▾ "; }
+details.meta dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-1) var(--sp-4); margin: var(--sp-2) 0 0; }
+details.meta dt { color: var(--text-muted); font-family: var(--font-mono); font-size: .82em; }
+details.meta dd { margin: 0; }
+.phase { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+         box-shadow: var(--shadow); padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) 0; }
+.phase > h3 { margin-top: 0; display: flex; align-items: center; gap: var(--sp-3); }
+.checklist { list-style: none; padding: 0; margin: var(--sp-3) 0; }
+.checklist li { padding: var(--sp-1) 0; display: flex; gap: var(--sp-3); align-items: baseline; }
+code.status { font-size: .78em; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+  border: 1px solid var(--st-idle-bd); color: var(--st-idle-fg); background: var(--st-idle-bg); white-space: nowrap; }
+code.status[data-st="wip"]  { border-color: var(--st-wip-bd);  color: var(--st-wip-fg);  background: var(--st-wip-bg); }
+code.status[data-st="x"]    { border-color: var(--st-done-bd); color: var(--st-done-fg); background: var(--st-done-bg); }
+code.status[data-st="done"] { border-color: var(--st-done-bd); color: var(--st-done-fg); background: var(--st-done-bg); }
+code.status[data-st="f"]    { border-color: var(--st-fail-bd); color: var(--st-fail-fg); background: var(--st-fail-bg); }
+figure { margin: var(--sp-4) 0; border: 1px solid var(--border); border-radius: var(--radius);
+         overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+figure img { display: block; width: 100%; height: auto; }
+figure figcaption { padding: var(--sp-3) var(--sp-4); color: var(--text-muted); font-size: .9em;
+                    border-top: 1px solid var(--border); background: var(--surface-2); }
+.fig-pending { display: grid; place-items: center; gap: var(--sp-2); aspect-ratio: 1536 / 1024; padding: var(--sp-5);
+  background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 14px, var(--surface) 14px, var(--surface) 28px);
+  color: var(--text-muted); text-align: center; }
+.fig-pending b { color: var(--text); font-weight: 600; }
+.fig-pending .hint { font-family: var(--font-mono); font-size: .8em; }
+figure:has(img) .fig-pending { display: none; }
+@media print {
+  :root { --bg: #fff; --surface: #fff; --shadow: none; }
+  body { color: #000; } .wrap { padding: 0; max-width: none; }
+  details.meta, details.amend, .phase, figure { break-inside: avoid; }
+  .fig-pending { border: 1px dashed #999; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="plan-head">
+  <h1>SOLAR FRONTIER — cinematic web space sim, vertical slice</h1>
+  <p class="subtitle">A browser-native open-world space game — fly, mine, fight, trade, and burn back the fog of war — built on React Three Fiber with a build-time AI asset pipeline (Tripo3D · ComfyUI · Blender · ElevenLabs · OpenAI), delivered first as one fully playable sector.</p>
+</header>
+
+<details class="meta" open>
+  <summary>Metadata</summary>
+  <dl>
+    <dt>created</dt><dd>2026-07-26</dd>
+    <dt>modified</dt><dd>2026-07-26 — initial authoring (append a new dd each revisit, never edit prior ones)</dd>
+    <dt>commits</dt><dd>— none yet</dd>
+    <dt>agent</dt><dd>plan-deep (Fable-5)</dd>
+    <dt>session</dt><dd>65320b6a-67b8-4aae-b9f8-39e614f3fc61</dd>
+    <dt>back refs</dt><dd>Operator brief + reference key art (2026-07-26); four scoping decisions taken via AskUserQuestion — engine <b>Web / React Three Fiber</b>, scope <b>vertical slice then expand</b>, location <b>new sibling repo</b>, art <b>AI-generated + procedural</b>.</dd>
+    <dt>forward refs</dt><dd>—</dd>
+  </dl>
+</details>
+
+<p class="legend">Status markers:
+  <code class="status">[]</code> idle ·
+  <code class="status" data-st="wip">[wip]</code> in progress ·
+  <code class="status" data-st="x">[x]</code> done ·
+  <code class="status" data-st="f">[f]</code> failed</p>
+
+<section id="purpose">
+  <h2>Purpose</h2>
+  <p>This plan exists to turn a broad "build a complete space game" brief into a buildable, honestly-scoped
+     engineering sequence. The operator wants an open-world solar-system game with exploration, fog of war,
+     asteroid mining, faction combat, trading outposts, gear upgrades, and swappable ships with unique
+     abilities — presented with cinematic, photoreal-leaning visuals matching the supplied key art.</p>
+  <p>The intended outcome of this plan is <b>not</b> a design document. It is a working, shareable URL: a
+     single star system with one fully playable sector loop — undock, fly out under fog of war, discover an
+     asteroid belt, mine it, get ambushed by pirates, survive, dock at a faction outpost, sell ore, buy an
+     upgrade, swap into a second hull, and see the map permanently brighten where you have been. Every system
+     in the brief is <em>architected</em> for full scope from day one; only <em>content volume</em> is deferred.</p>
+  <p><b>Why the slice comes first:</b> the brief's failure mode is a year of systems work with nothing playable.
+     The slice forces every subsystem — flight, mining, combat, AI, economy, docking, fog, save — to touch the
+     player within the first milestone, so balance and feel problems surface while they are still cheap.</p>
+  <figure>
+    <img src="solar-frontier/hero.png" alt="a lone freighter emerging from a wall of darkness into a lit asteroid belt, half the star map behind it still black and half revealed, expressing exploration burning back fog of war">
+    <div class="fig-pending"><b>Image pending</b><span class="hint">hero.png — see solar-frontier.image-prompts.md</span></div>
+    <figcaption>The end state in one image: the player's own movement is what converts unknown space into known, permanently.</figcaption>
+  </figure>
+</section>
+
+<section id="problem">
+  <h2>Problem</h2>
+  <p>Four hard constraints collide in this brief, and the plan's job is to resolve them rather than pretend
+     they do not exist:</p>
+  <ol>
+    <li><b>Photorealism vs. the browser.</b> The reference art is an offline-rendered still. A WebGL2/WebGPU
+        canvas has a ~30&nbsp;MB practical asset budget before load times ruin first impressions, no ray
+        tracing, no Nanite, and a 16&nbsp;ms frame budget on a mid-range laptop GPU. The look must therefore
+        be bought with <em>lighting, volumetrics, post-processing and composition</em> — not with polygon and
+        texture density. This is achievable: the perceived realism in the reference comes overwhelmingly from
+        rim lighting, bloom, atmospheric depth, lens artifacts and scale contrast, all of which are cheap.</li>
+    <li><b>Solar-system scale vs. float32.</b> Single-precision positions visibly jitter past ~10<sup>5</sup>
+        units. A real solar system is 10<sup>11</sup> metres across. Without a floating-origin and a layered
+        camera strategy, distant planets shimmer and geometry z-fights — the single most common failure in
+        web space games.</li>
+    <li><b>"Complete game" vs. one developer plus agents.</b> The brief lists roughly a dozen interlocking
+        systems. Built breadth-first they all reach 60% and none ship.</li>
+    <li><b>AI asset generation vs. runtime determinism.</b> Tripo3D, ComfyUI, Blender-MCP and ElevenLabs are
+        excellent <em>authoring</em> tools and unacceptable <em>runtime</em> dependencies — variable latency,
+        credit cost, network failure, and non-reproducible output. Left unaddressed, the game would only run
+        on the machine that has ComfyUI open.</li>
+  </ol>
+  <figure>
+    <img src="solar-frontier/problem.png" alt="four labelled pressure arrows crushing a small browser window in the centre, labelled photoreal fidelity, solar-system scale, systems breadth, and live AI asset dependency">
+    <div class="fig-pending"><b>Image pending</b><span class="hint">problem.png — see prompt sheet</span></div>
+    <figcaption>The four forces this plan has to resolve before a single ship model is generated.</figcaption>
+  </figure>
+</section>
+
+<section id="solution">
+  <h2>Solution</h2>
+  <h3>Technology stack (the milestone-1 decision, resolved)</h3>
+  <ul>
+    <li><b>Runtime:</b> TypeScript · Vite · React 19 · <b>React Three Fiber</b> (r3f) over three.js, with
+        <code>@react-three/drei</code> for camera/loader helpers.</li>
+    <li><b>Renderer:</b> three.js <code>WebGPURenderer</code> where available, automatic WebGL2 fallback.
+        WebGPU buys compute-shader particles and cheaper instancing; the fallback path must stay first-class,
+        not aspirational.</li>
+    <li><b>Post-processing:</b> the <code>postprocessing</code> library (pmndrs) — SelectiveBloom,
+        DepthOfField, chromatic aberration, anamorphic lens flare, film grain, vignette, SMAA. This effect
+        stack <em>is</em> the cinematic look; it is a Phase-1 concern, not a polish concern.</li>
+    <li><b>Simulation:</b> <b>miniplex</b> ECS holding all entity state <em>outside</em> React. React renders
+        the shell (HUD, menus, map); the per-frame simulation never triggers a React re-render. Violating this
+        boundary is the #1 performance trap in r3f games.</li>
+    <li><b>Physics:</b> hand-rolled arcade integrator ("physics-lite", exactly as briefed) plus a uniform
+        spatial hash for broadphase and analytic sphere/OBB collision. No Rapier/WASM — a full rigid-body
+        solver is weight we do not need and feel we do not want.</li>
+    <li><b>State &amp; persistence:</b> zustand for UI-facing state; <code>idb-keyval</code> (IndexedDB) for
+        the save file, including the fog-of-war discovery set.</li>
+    <li><b>Audio:</b> Web Audio API directly (not Howler) — dynamic music needs sample-accurate stem
+        crossfading and a shared bus for ducking, which the raw API gives and wrappers obscure.</li>
+    <li><b>Assets:</b> glTF 2.0 / GLB with Draco or meshopt compression, KTX2/Basis textures, all
+        <b>generated at build time</b> and served as static files.</li>
+    <li><b>Testing:</b> Vitest (simulation/economy/procgen units) + Playwright (boot, dock, save-restore
+        smoke) + a scripted deterministic perf probe.</li>
+  </ul>
+
+  <h3>The five architectural commitments</h3>
+  <ol>
+    <li><b>Floating origin + three camera layers.</b> The player ship stays near world origin; the universe
+        translates around it. Rendering is split into a far layer (starfield, nebulae, planets as
+        fake-scale impostors, depth cleared), a mid layer (belts, stations, capital hulls) and a near layer
+        (player, combatants, debris, VFX). Planets "loom" by being rendered small-but-close in the far layer
+        with a matched light direction — the grandeur is a compositing trick, and a completely standard one.</li>
+    <li><b>Seeded deterministic procgen.</b> One 64-bit seed derives the entire system: planet orbits, belt
+        placement, mineral distribution, outpost sites, pirate den locations. The seed goes in the save file,
+        so a world is a 20-byte string, bug reports are reproducible, and the vertical slice's sector can be
+        pinned to one hand-tuned seed while the generator keeps working for the full system later.</li>
+    <li><b>Offline AI asset pipeline.</b> A <code>tools/</code> workspace in the game repo drives Tripo3D
+        (text/image → GLB hulls), local ComfyUI (PBR texture sets, skybox cubemaps, UI art, station decals),
+        Blender via MCP on <code>:9876</code> (retopo, decimate, LOD chain, collision proxies, pivot/scale
+        normalisation, GLB export), ElevenLabs (SFX + music stems) and OpenAI images (concept passes feeding
+        Tripo3D's image-to-3D). Every artifact is committed or LFS-tracked as a finished static file with a
+        manifest recording its provenance and generation parameters. <b>The shipped game makes zero AI API
+        calls and runs fully offline.</b></li>
+    <li><b>Asteroids are procedural, not modelled.</b> Icosphere + 3-octave simplex displacement, generated in
+        a Web Worker, rendered via <code>InstancedMesh</code> with 3 LODs and per-instance material tinting by
+        mineral type. Thousands of unique-looking rocks for a few hundred KB — this is strictly better than
+        generating asteroid models, and it is what the reference image's belt actually needs.</li>
+    <li><b>Sector graph as the single spatial abstraction.</b> The system is a graph of named sectors; fog of
+        war, spawn tables, faction control, ambient music selection, streaming and the star map all key off
+        the same <code>sectorId</code>. One concept, six features.</li>
+  </ol>
+
+  <h3>Vertical-slice content bill (Milestone 1)</h3>
+  <ul>
+    <li><b>1</b> star system · <b>9</b> sectors (3&times;3 grid) of which <b>5</b> are authored-interesting.</li>
+    <li><b>1</b> asteroid belt with <b>3</b> minerals (Iron, Titanium, Quantum Crystal) + salvage scrap.</li>
+    <li><b>3</b> factions: <b>Consortium</b> (traders/industry), <b>Vanguard</b> (law/military),
+        <b>Ashvein Pirates</b> (hostile). Reputation per faction, affecting prices and gear tier access.</li>
+    <li><b>3</b> player hulls: <b>Kestrel</b> light fighter (ability: afterburner), <b>Mule</b> heavy freighter
+        (ability: EMP burst), <b>Ridgeback</b> mining barge (ability: ore-scanner pulse).</li>
+    <li><b>2</b> outposts (one Consortium, one Vanguard) · <b>1</b> pirate den · <b>~10</b> upgrade modules
+        across shields / engines / mining laser / weapons.</li>
+    <li><b>3</b> weapons: pulse cannon, railgun, mining laser. Missiles deferred to Milestone 2.</li>
+  </ul>
+  <figure>
+    <img src="solar-frontier/solution.png" alt="a labelled architecture diagram with three horizontal bands: an offline AI asset pipeline feeding a static asset bundle, a browser runtime band showing ECS simulation beside a React UI shell, and a rendering band split into far mid and near camera layers">
+    <div class="fig-pending"><b>Image pending</b><span class="hint">solution.png — see prompt sheet</span></div>
+    <figcaption>Target architecture: AI tools live entirely on the left of the build boundary; the runtime is static, offline and deterministic.</figcaption>
+  </figure>
+</section>
+
+<section id="files">
+  <h2>Relevant files</h2>
+  <h3>Existing</h3>
+  <ul>
+    <li><code>H:\FABLE-HARNESS\CONSTITUTION.md</code> — governs how this plan is executed (N3 bounded retry,
+        N8 no-MCP-in-harness-operation, N9 preserved-invariants discipline). Note the N8 boundary: the
+        <em>harness</em> never depends on MCP/network; the <em>game repo's build-time</em> asset pipeline
+        legitimately does, and must never leak that dependency into the game's runtime.</li>
+    <li><code>H:\FABLE-HARNESS\specs\solar-frontier.html</code> — this plan; the live status board. Flip status
+        chips here as phases progress.</li>
+    <li><code>H:\FABLE-HARNESS\specs\solar-frontier\</code> — sibling folder for this plan's figure PNGs.</li>
+    <li><code>H:\FABLE-HARNESS\.claude\skills\lib\plan-images.ps1</code> — the local, no-network CLI used to
+        extract this plan's image prompt sheet and later apply the generated PNGs.</li>
+  </ul>
+  <h3>New — game repo at <code>H:\solar-frontier\</code> (its own git repo, outside the harness)</h3>
+  <ul>
+    <li><code>package.json</code>, <code>vite.config.ts</code>, <code>tsconfig.json</code>, <code>eslint.config.js</code> — toolchain.</li>
+    <li><code>index.html</code>, <code>src/main.tsx</code>, <code>src/App.tsx</code> — entry + app shell.</li>
+    <li><code>src/render/Renderer.tsx</code> — WebGPU-with-WebGL2-fallback canvas, tone mapping, colour space.</li>
+    <li><code>src/render/PostFX.tsx</code> — the cinematic effect stack (bloom, DoF, flare, grain, vignette, SMAA).</li>
+    <li><code>src/render/layers/{FarLayer,MidLayer,NearLayer}.tsx</code> — the three-camera compositing strategy.</li>
+    <li><code>src/render/Skybox.tsx</code>, <code>src/render/VolumetricFog.tsx</code>, <code>src/render/LensFlare.tsx</code> — deep-space atmosphere.</li>
+    <li><code>src/ecs/world.ts</code>, <code>src/ecs/components.ts</code> — miniplex world + component schema.</li>
+    <li><code>src/ecs/systems/*.ts</code> — <code>flight</code>, <code>collision</code>, <code>weapons</code>,
+        <code>damage</code>, <code>ai</code>, <code>mining</code>, <code>pickup</code>, <code>spawn</code>,
+        <code>lod</code>, <code>audio</code>, <code>fog</code>.</li>
+    <li><code>src/sim/floatingOrigin.ts</code> — origin rebasing when the player exceeds the shift threshold.</li>
+    <li><code>src/sim/flightModel.ts</code> — thrusters, retro-rockets, strafe, angular damping, boost.</li>
+    <li><code>src/sim/spatialHash.ts</code> — uniform-grid broadphase.</li>
+    <li><code>src/worldgen/{rng,system,belt,asteroid,outposts,sectors}.ts</code> — seeded generation.</li>
+    <li><code>src/worldgen/asteroid.worker.ts</code> — off-thread displaced-icosphere meshing.</li>
+    <li><code>src/game/{economy,market,inventory,upgrades,ships,abilities,factions,reputation,save}.ts</code> — rules layer, pure and unit-testable.</li>
+    <li><code>src/data/*.json</code> — ships, modules, minerals, factions, market curves, spawn tables (data-driven balance).</li>
+    <li><code>src/ui/{Hud,Targeting,CargoBay,StationView,Market,Outfitter,Shipyard,StarMap,Settings}.tsx</code> — React UI shell.</li>
+    <li><code>src/ui/fog/fogTexture.ts</code> — the persistent discovery mask backing the star map reveal.</li>
+    <li><code>src/audio/{engine,mixer,musicDirector,sfx}.ts</code> — Web Audio graph + adaptive stem director.</li>
+    <li><code>tools/pipeline/{tripo,comfy,blenderMcp,elevenlabs,openaiImage}.ts</code> — build-time generators.</li>
+    <li><code>tools/pipeline/optimize.ts</code> — gltf-transform: Draco/meshopt, KTX2, LOD emit, budget report.</li>
+    <li><code>tools/pipeline/manifest.json</code> — per-asset provenance: tool, prompt, seed, params, licence, hash.</li>
+    <li><code>public/assets/{ships,stations,textures,skybox,audio}/</code> — the committed static output.</li>
+    <li><code>tests/unit/*.test.ts</code>, <code>tests/e2e/*.spec.ts</code>, <code>tests/perf/probe.ts</code>.</li>
+    <li><code>docs/{GDD.md,ART_BIBLE.md,PIPELINE.md,BALANCE.md}</code> — the design-document deliverable, kept in-repo beside the code it describes.</li>
+  </ul>
+</section>
+
+<section id="phases">
+  <h2>Implementation phases</h2>
+
+  <div class="phase">
+    <h3>Phase 1 — Foundation, renderer, and the cinematic baseline <code class="status" data-st="x">[x]</code></h3>
+    <p><b>Closed 2026-07-27</b> across six implementation runs plus one documentation run. Every
+      task-list item ships and was confirmed rendering in real GPU Chrome. <b>Two exit checks remain
+      genuinely unverified and are NOT claimed as passed:</b> the mid-range-GPU and integrated-GPU
+      frame-rate targets (60 fps was measured on an RTX 3080 Ti, which is above "mid-range"; no
+      mid-range or integrated hardware was available), and Firefox/Safari console cleanliness (the
+      available browser tooling drives Chrome only). All measured evidence — build, test, bundle,
+      frame-time, console census, exit-check status, deliberate substitutions and the full defect
+      history — lives in <code>H:\solar-frontier\docs\verification\phase-1-capture.md</code>, which
+      is the citable source of truth for every empirical claim about this phase.</p>
+    <p class="legend"><b>The most instructive fact about Phase 1:</b> its first delivery rendered a
+      completely black screen while passing typecheck, lint, every test, the production build and the
+      bundle-size budget. A green build is not evidence that a rendering change works — carry that
+      into every later phase.</p>
+    <p>Stand up the repo and prove the <em>look</em> before any gameplay exists. The deliverable is a static
+       scene — one placeholder hull, one lit asteroid, one skybox, one looming planet — that already reads as
+       cinematic. If the look cannot be reached with an empty scene, no amount of gameplay will rescue it, so
+       this risk is retired first.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status" data-st="x">[x]</code> Initialise <code>H:\solar-frontier</code>: git, pnpm, Vite, TypeScript strict, React 19, r3f, drei, eslint + prettier, Vitest.</li>
+      <li><code class="status" data-st="x">[x]</code> <code>Renderer.tsx</code>: WebGPU with feature-detected WebGL2 fallback<sup>†1</sup>; ACES Filmic tone mapping; sRGB output; adaptive DPR clamp.</li>
+      <li><code class="status" data-st="x">[x]</code> Three-layer camera compositing (far/mid/near) with independent near/far planes and depth clear between layers<sup>†2</sup>.</li>
+      <li><code class="status" data-st="x">[x]</code> <code>PostFX.tsx</code>: Bloom (global, replacing SelectiveBloom to resolve an upstream render-loop regression — see Amendment), DepthOfField, GodRays (sun-matched, standing in for the anamorphic lens-flare item), chromatic aberration, film grain, vignette, SMAA — with a quality-tier switch (low/med/high/ultra).</li>
+      <li><code class="status" data-st="x">[x]</code> Deep-space volumetric fog: procedural (fbm-noise-shaded sphere, not screen-space raymarched) nebula backdrop in the far layer, driven by the shared 3D simplex noise chunk.</li>
+      <li><code class="status" data-st="x">[x]</code> Lighting rig: one directional "sun" with a matched flare/GodRays, skybox-tinted ambient fill, and an emissive-driven bloom convention documented in <code>docs/ART_BIBLE.md</code>.</li>
+      <li><code class="status" data-st="x">[x]</code> Perf HUD (r3f-perf, dev-gated) + <code>tests/perf/probe.ts</code> capturing frame time on a fixed camera path.</li>
+      <li><code class="status" data-st="x">[x]</code> CI: typecheck, lint, unit tests, production build, bundle-budget assertion.</li>
+      <li><code class="status" data-st="x">[x]</code> Write <code>docs/ART_BIBLE.md</code> — the look rules: exposure range, emissive budget, rim-light convention, flare discipline, colour script per sector type.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Static scene holds &ge;60&nbsp;fps at 1080p on the target mid-range GPU at "high" tier; &ge;30&nbsp;fps at "low" on integrated graphics. <b>Unverified this stage</b> — no GPU-instrumented browser was available to the engineer; <code>tests/perf/probe.ts</code> + <code>?perf=1</code> exist and are ready to run, see <code>docs/ART_BIBLE.md</code> "Phase 1 verification status".</li>
+      <li><code class="status">[]</code> Both WebGPU and forced-WebGL2 paths render visually equivalent frames (side-by-side screenshot review). <b>Superseded this stage</b> — see Amendment †1: only a WebGL2 path exists in Phase 1, so there is no second path to compare against yet.</li>
+      <li><code class="status">[]</code> No console errors/warnings on boot in Chrome, Firefox and Safari. <b>Unverified this stage</b> — same no-browser-harness constraint as the fps check.</li>
+      <li><code class="status">[]</code> Side-by-side comparison against the reference key art: a written verdict on which qualities are matched and which are deliberately out of reach. <b>Blocked</b> — the reference key art (<code>phase1.png</code>) is itself still "Image pending" in this plan, so there is nothing to compare against yet; see <code>docs/ART_BIBLE.md</code> for what the implementation can claim in the meantime.</li>
+      <li><code class="status" data-st="x">[x]</code> <code>pnpm build</code> output &lt; 2&nbsp;MB JS gzipped, excluding assets. Mechanically verified: <code>pnpm run test:budget</code> reports 0.361&nbsp;MB gzipped JS against the 2&nbsp;MB budget.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase1.png" alt="a single grey placeholder spaceship lit dramatically against a nebula skybox with a huge planet behind it, demonstrating that lighting and post-processing alone deliver the cinematic look">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase1.png — see prompt sheet</span></div>
+      <figcaption>Phase 1 output: an empty scene that already looks like the reference art. Look first, gameplay second.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 2 — AI asset &amp; audio pipeline spike (end-to-end, one of each) <code class="status">[]</code></h3>
+    <p>De-risk the entire art strategy early by pushing exactly one asset of each class all the way through the
+       pipeline and into the running build. Volume comes later; the <em>path</em> must be proven now, because
+       if Tripo3D output cannot be normalised into a game-ready GLB, the art plan changes and every later
+       phase's estimates change with it.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>tools/pipeline/openaiImage.ts</code>: concept-art pass — orthographic ship views from a prompt, saved as pipeline inputs.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/tripo.ts</code>: text-to-3D and image-to-3D calls, polling, GLB download, retry/backoff, credit-usage logging.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/blenderMcp.ts</code>: connect to Blender MCP on <code>:9876</code> — import, decimate to target tri-count, generate LOD0/1/2, normalise scale + pivot + forward axis, build a convex collision proxy, export GLB.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/comfy.ts</code>: ComfyUI workflow submission for (a) a PBR texture set and (b) a 6-face nebula skybox cubemap; seed and workflow JSON recorded per output.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/elevenlabs.ts</code>: SFX generation (engine hum loop, pulse cannon, mining laser, explosion) and music stem generation.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/optimize.ts</code>: gltf-transform — meshopt/Draco, KTX2 texture compression, per-asset budget report that fails the build when exceeded.</li>
+      <li><code class="status">[]</code> <code>manifest.json</code> provenance record per asset: tool, prompt, seed, parameters, output hash, licence note.</li>
+      <li><code class="status">[]</code> Ship the first real hull (Kestrel), first station module, first skybox and first four SFX into the Phase-1 scene.</li>
+      <li><code class="status">[]</code> Write <code>docs/PIPELINE.md</code> — how to regenerate any asset from scratch, and the explicit rule that runtime never calls these tools.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Generated Kestrel GLB loads, is correctly scaled and oriented, &le;15k triangles at LOD0, with working LOD switching.</li>
+      <li><code class="status">[]</code> Full asset bundle for the slice projects under a 30&nbsp;MB budget; the budget check fails CI when exceeded (verify by deliberately breaching it).</li>
+      <li><code class="status">[]</code> Pipeline is reproducible: re-running a manifest entry regenerates an equivalent asset, or the non-determinism is documented and the artifact is treated as immutable.</li>
+      <li><code class="status">[]</code> <b>Offline test — the load-bearing one:</b> production build served with all AI endpoints unreachable and ComfyUI/Blender not running boots and plays identically.</li>
+      <li><code class="status">[]</code> No API key or endpoint string appears anywhere in the client bundle (grep the build output).</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase2.png" alt="a left-to-right conveyor diagram showing a text prompt becoming concept art becoming a raw 3D mesh becoming a cleaned optimised game asset, with a thick vertical wall labelled build boundary separating it from the browser">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase2.png — see prompt sheet</span></div>
+      <figcaption>Prompt → concept → mesh → cleanup → optimised GLB. Everything left of the wall happens once, on your machine.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 3 — Flight model, camera and input (the player controller) <code class="status">[]</code></h3>
+    <p>The requested "player controller script", built properly: a physics-lite arcade flight model whose feel
+       is the game's single most important quality. Every subsequent system is judged through this. Tune it
+       until flying an empty void is enjoyable on its own.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>flightModel.ts</code>: main thrust, retro-rockets/brake, 6-way directional strafe thrusters, pitch/yaw/roll with per-axis angular damping, configurable inertia, hard speed cap with a boost overrun.</li>
+      <li><code class="status">[]</code> Two flight assists: <b>Assisted</b> (velocity aligns to facing, forgiving) and <b>Newtonian</b> (drift retained) — toggleable, defaulting to Assisted.</li>
+      <li><code class="status">[]</code> Per-hull handling profiles driven from <code>src/data/ships.json</code>, so Kestrel/Mule/Ridgeback feel genuinely different.</li>
+      <li><code class="status">[]</code> Chase camera: spring-damped follow, speed-driven FOV, roll lean, impact/thrust shake, and a cinematic near-clip-safe framing.</li>
+      <li><code class="status">[]</code> Input abstraction: keyboard+mouse, gamepad, remappable bindings persisted to IndexedDB.</li>
+      <li><code class="status">[]</code> Thruster VFX bound to actual control inputs — engine plume scaling, RCS puffs on strafe, heat-haze at boost.</li>
+      <li><code class="status">[]</code> Engine audio bound to throttle: layered bass hum with pitch/gain envelopes and a boost transient.</li>
+      <li><code class="status">[]</code> Fixed-timestep simulation (60&nbsp;Hz) with render interpolation, so feel is frame-rate independent.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Unit tests: integrator is deterministic and identical across 30/60/144&nbsp;fps render rates.</li>
+      <li><code class="status">[]</code> Input-to-visible-response latency under 2 frames; no dropped inputs under load.</li>
+      <li><code class="status">[]</code> All three hull profiles measurably differ in time-to-max-speed, turn rate and stopping distance (asserted numerically).</li>
+      <li><code class="status">[]</code> Hands-on feel review against the brief's "responsive, physics-lite" wording; record the verdict in <code>docs/BALANCE.md</code>.</li>
+      <li><code class="status">[]</code> Gamepad and keyboard paths both fully playable.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase3.png" alt="a spaceship seen from behind with labelled coloured arrows for main thrust retro braking strafe and roll, showing the full control envelope of the flight model">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase3.png — see prompt sheet</span></div>
+      <figcaption>The control envelope. If this does not feel good in an empty void, nothing later will save it.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 4 — World scale, sectors, and procedural system generation <code class="status">[]</code></h3>
+    <p>Build the universe the player flies through: floating origin, the sector graph, seeded generation of
+       planets, belts, outposts and dens, and streaming so only nearby content is resident. This is the
+       requested "procedural generation logic" milestone.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>floatingOrigin.ts</code>: rebase world when the player exceeds a threshold; all systems consume origin-relative positions; store absolute positions in float64.</li>
+      <li><code class="status">[]</code> <code>rng.ts</code>: seeded PRNG (xoshiro/PCG) with named sub-streams, so adding a generator never reshuffles existing content for a given seed.</li>
+      <li><code class="status">[]</code> <code>system.ts</code>: star, planets on orbital rings, moons, belt placement, a 3&times;3 sector grid with typed sectors (core / belt / deep / contested / anomaly).</li>
+      <li><code class="status">[]</code> <code>belt.ts</code>: asteroid field distribution (density falloff, clustering, mineral-richness map per belt biome).</li>
+      <li><code class="status">[]</code> <code>outposts.ts</code>: station and pirate-den siting with faction-control assignment and minimum-separation constraints.</li>
+      <li><code class="status">[]</code> Streaming: activate/deactivate sector content by distance; object pooling for asteroids, ships and projectiles.</li>
+      <li><code class="status">[]</code> Far-layer planet rendering: fake-scale impostors with matched sun direction, atmosphere rim shader and terminator shading.</li>
+      <li><code class="status">[]</code> Dev-only seed browser: regenerate and inspect systems, pin the slice's chosen seed into <code>src/data/</code>.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Determinism test: the same seed produces byte-identical generated layouts across 100 runs.</li>
+      <li><code class="status">[]</code> Precision test: fly to the system's outer edge — no positional jitter, no z-fighting, no visible origin-shift pop.</li>
+      <li><code class="status">[]</code> Constraint tests over 1000 seeds: no overlapping stations, every sector reachable, every belt has &ge;1 mineral type.</li>
+      <li><code class="status">[]</code> Streaming test: crossing all 9 sectors keeps memory flat (no leak) and causes no frame spike &gt;33&nbsp;ms.</li>
+      <li><code class="status">[]</code> Visual check: planets read as massive from every sector, per the brief's "loom massive in the background".</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase4.png" alt="a top-down schematic of a star system showing a central star concentric orbital rings a three by three sector grid overlay and labelled markers for asteroid belt trading outpost and pirate den">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase4.png — see prompt sheet</span></div>
+      <figcaption>One 64-bit seed produces this entire layout — and the same seed always produces it again.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 5 — Asteroids and the mining loop <code class="status">[]</code></h3>
+    <p>The first complete gameplay loop: fly to a belt, target a rock, mine it, break it into chunks, scoop the
+       chunks, fill cargo. Asteroids are procedurally meshed and instanced, never hand-modelled.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>asteroid.worker.ts</code>: icosphere + 3-octave simplex displacement producing a pool of ~24 unique meshes per biome, generated off the main thread.</li>
+      <li><code class="status">[]</code> <code>InstancedMesh</code> rendering with 3 LODs, frustum + distance culling, per-instance rotation drift and mineral-tint.</li>
+      <li><code class="status">[]</code> Mineral visual language: emissive crystal veins for Quantum Crystal, metallic speckle for Titanium, dull ferrous for Iron — readable at a glance from mining range.</li>
+      <li><code class="status">[]</code> Mining laser: continuous beam, heat/overheat model, per-second yield scaling with laser tier and hull bonus, sustained-contact requirement.</li>
+      <li><code class="status">[]</code> Asteroid integrity → fracture: splits into 2–4 smaller instances plus collectible ore chunks; the tiniest tier vaporises.</li>
+      <li><code class="status">[]</code> Ore chunks: magnetic tractor pickup within radius, cargo-hold capacity enforcement, "hold full" feedback.</li>
+      <li><code class="status">[]</code> Ship–asteroid collision via the spatial hash: bump damage proportional to impact speed.</li>
+      <li><code class="status">[]</code> Mining VFX/SFX: beam impact sparks, glowing molten cut point, dust plume, fracture debris, and the crack-then-shatter audio arc.</li>
+      <li><code class="status">[]</code> Ore-scanner pulse ability (Ridgeback): a radial ping that highlights high-value rocks through the belt for a few seconds.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> 2000 instanced asteroids in view hold the frame budget; measured by the perf probe on a fixed belt fly-through.</li>
+      <li><code class="status">[]</code> Unit tests: yield curves, fracture tiering, and cargo capacity math (including the exactly-full boundary case).</li>
+      <li><code class="status">[]</code> Worker meshing never blocks the main thread &gt;4&nbsp;ms in a single frame.</li>
+      <li><code class="status">[]</code> A full mine-a-rock-to-nothing cycle produces the expected total ore, with no orphaned instances or leaked pool entries.</li>
+      <li><code class="status">[]</code> Playtest: mining a single asteroid takes 8–20&nbsp;s by tier and feels weighty rather than tedious.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase5.png" alt="a mining barge cutting into a large asteroid with a glowing orange beam, molten fracture lines spreading across the rock surface and green crystal ore chunks drifting free">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase5.png — see prompt sheet</span></div>
+      <figcaption>Mining: sustained contact, spreading fracture, then a shatter that pays out. The loop that funds everything else.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 6 — Combat, damage and destruction <code class="status">[]</code></h3>
+    <p>Shields, hull, weapons, evasion, and explosions that light the world — the brief explicitly asks that
+       detonations cast dynamic light on nearby asteroids and ships, so that is a stated requirement here, not
+       a nice-to-have.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Defence model: regenerating shields with a post-hit delay, then hull integrity, then destruction; per-hull and per-module modifiers.</li>
+      <li><code class="status">[]</code> Weapons: pulse cannon (projectile, capacitor-limited), railgun (hitscan, charge-up, shield-piercing fraction), mining laser reused as a weak weapon.</li>
+      <li><code class="status">[]</code> Capacitor/heat economy shared across weapons and boost, so offence and evasion genuinely trade off.</li>
+      <li><code class="status">[]</code> Targeting: nearest/next-target cycling, lead-indicator reticle, subsystem-agnostic damage for the slice.</li>
+      <li><code class="status">[]</code> Hit feedback: shield-impact hex ripple shader, hull scorch decals, sparking damage particles, screen shake and audio ducking on heavy hits.</li>
+      <li><code class="status">[]</code> Destruction: multi-stage explosion with a real dynamic point light, expanding shockwave, tumbling debris chunks, and salvage/loot drops.</li>
+      <li><code class="status">[]</code> Loot: scrap, salvaged modules, and faction-specific drops from pirate kills.</li>
+      <li><code class="status">[]</code> Player death: hull loss → respawn at last docked station with an insurance/cargo-loss penalty.</li>
+      <li><code class="status">[]</code> Combat abilities: Kestrel afterburner, Mule EMP burst (disables nearby AI weapons briefly), plus a cloaking device reserved for Milestone 2.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Unit tests: damage application order (shield → hull), regeneration timing, EMP duration, insurance settlement math.</li>
+      <li><code class="status">[]</code> Projectile collision is reliable at maximum closing speed — no tunnelling (verified with a swept-sphere test at 2&times; max relative velocity).</li>
+      <li><code class="status">[]</code> Eight simultaneous combatants plus VFX hold &ge;50&nbsp;fps at "high" tier.</li>
+      <li><code class="status">[]</code> Verified on screen: an explosion visibly lights nearby asteroids and hulls (the brief's explicit atmosphere requirement).</li>
+      <li><code class="status">[]</code> No dynamic-light leak — light count returns to baseline after all explosions finish.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase6.png" alt="a fighter exploding between two asteroids with the blast visibly casting warm orange light across the surrounding rock faces and a second ship hull">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase6.png — see prompt sheet</span></div>
+      <figcaption>Destruction as a lighting event: the explosion must change how everything nearby is lit.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 7 — AI, factions and reputation <code class="status">[]</code></h3>
+    <p>Populate the system with agents that have their own business: pirates hunting value, traders running
+       routes, patrols enforcing law. Reputation makes the player's choices stick.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> AI core: behaviour-tree or utility-scored state machine — patrol, pursue, attack, evade, flee, dock, mine, escort — sharing the player's flight model so AI ships obey the same physics.</li>
+      <li><code class="status">[]</code> Combat AI: lead-aim with skill-scaled error, break-off manoeuvres, strafe evasion, morale-based fleeing below a hull threshold.</li>
+      <li><code class="status">[]</code> Pirates: ambush spawning weighted by sector value and player cargo worth — the brief's "actively ambushing in high-value resource zones", implemented as a real value heuristic rather than random spawns.</li>
+      <li><code class="status">[]</code> Traders/miners: neutral NPCs flying station-to-station and working belts; attackable (piracy) or defendable (escort).</li>
+      <li><code class="status">[]</code> Faction model: Consortium, Vanguard, Ashvein, with a reputation scalar each and an inter-faction relationship matrix, so helping one can cost you another.</li>
+      <li><code class="status">[]</code> Reputation consequences: market price modifiers, gear-tier gating, docking permission, and patrol hostility.</li>
+      <li><code class="status">[]</code> Distress-call events: a trader under pirate attack, with reputation rewards for intervening — the first emergent content hook.</li>
+      <li><code class="status">[]</code> Sensor/awareness model so AI cannot see through the fog the player cannot.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Unit tests: reputation arithmetic, threshold crossings, and the hostility matrix, including the "hostile to everyone" edge state.</li>
+      <li><code class="status">[]</code> Headless soak: 30 minutes of simulated AI with no player produces no deadlock, no runaway spawns, and stable population counts.</li>
+      <li><code class="status">[]</code> AI ships never fly through asteroids or stations; collision avoidance verified in a dense belt.</li>
+      <li><code class="status">[]</code> Playtest: an ambush is threatening but survivable in a starting hull; a fleeing enemy is catchable but not trivially.</li>
+      <li><code class="status">[]</code> Attacking a trader visibly and durably changes prices and patrol behaviour on the next dock.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase7.png" alt="three faction emblems arranged in a triangle connected by labelled relationship arrows, with small ship silhouettes clustered around each emblem showing patrols traders and raiders">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase7.png — see prompt sheet</span></div>
+      <figcaption>Three factions, one relationship matrix. Every shot fired moves the player somewhere on it.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 8 — Stations, economy, outfitting and ship swapping <code class="status">[]</code></h3>
+    <p>Close the loop: the safe harbour where mined ore and salvage become capability. Docking, market,
+       outfitter, shipyard, and the abilities that make hulls play differently.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Docking: approach corridor, clearance request gated on reputation, docking animation, and a station interior/menu context.</li>
+      <li><code class="status">[]</code> Market: per-station supply/demand pricing with a price curve reacting to player volume, mineral base values, and reputation discounts. Sell ore, sell salvage, buy fuel/ammo.</li>
+      <li><code class="status">[]</code> Outfitter: module slots per hull (shield, engine, weapon &times;N, mining laser, cargo expander, utility), tiered stock gated by faction reputation, buy/sell/fit/unfit with stat-delta previews.</li>
+      <li><code class="status">[]</code> Shipyard: purchase and swap between Kestrel, Mule and Ridgeback; a hangar holding owned hulls with their fittings preserved; cargo transfer rules on swap.</li>
+      <li><code class="status">[]</code> Ability system: per-hull active ability with cooldown, energy cost, HUD binding and VFX/SFX (afterburner, EMP burst, ore-scanner pulse).</li>
+      <li><code class="status">[]</code> Repair and rearm services, priced against hull damage.</li>
+      <li><code class="status">[]</code> Data-driven balance: all ships, modules, minerals and price curves live in <code>src/data/*.json</code> with a schema and a validator.</li>
+      <li><code class="status">[]</code> Station exteriors and interiors dressed with Phase-2 pipeline assets; docking-bay lighting as a deliberate warm/cold contrast against open space.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Unit tests: pricing curves, reputation discounts, the full buy → fit → sell → refund cycle, and that no sequence of trades creates money from nothing.</li>
+      <li><code class="status">[]</code> Schema validation of all data files runs in CI; a malformed module fails the build.</li>
+      <li><code class="status">[]</code> Ship swap preserves fittings and cargo correctly, including the over-capacity case (swapping freighter → fighter with a full hold).</li>
+      <li><code class="status">[]</code> Every ability fires, respects cooldown, and has visible plus audible feedback.</li>
+      <li><code class="status">[]</code> Playtest: one full belt run funds a meaningful upgrade — the economy's core pacing assertion.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase8.png" alt="a ship docked inside a brightly lit industrial station hangar with a holographic outfitting interface floating beside it showing module slots and stat bars">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase8.png — see prompt sheet</span></div>
+      <figcaption>The harbour: where ore becomes capability, and the reason to go back out.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 9 — Fog of war, star map and the full UI/UX flow <code class="status">[]</code></h3>
+    <p>The exploration payoff, plus the requested UI/UX milestone: inventory, upgrade menu, and the fog-of-war
+       map as one coherent interface language.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Discovery model: per-sector <code>unknown → detected → explored</code>, driven by proximity and sensor range; discovery is permanent and persisted.</li>
+      <li><code class="status">[]</code> Sub-sector reveal: a discovery mask texture per sector so partial exploration reads as partial, not binary.</li>
+      <li><code class="status">[]</code> Points of interest surface on discovery: planets, belts, outposts, pirate dens, anomalies — each with its own map icon and first-sighting notification.</li>
+      <li><code class="status">[]</code> Star map: full-screen 3D system view with the fog mask applied, pan/zoom/rotate, POI filtering, distance and travel-time readouts, and a set-waypoint action.</li>
+      <li><code class="status">[]</code> HUD: shields/hull/capacitor, throttle, speed, cargo fill, target panel with faction colour coding, waypoint compass, contextual prompts, damage-direction indicators.</li>
+      <li><code class="status">[]</code> Cargo/inventory screen: mineral stacks with values, jettison, and an at-a-glance "what is this hold worth" total.</li>
+      <li><code class="status">[]</code> UI design language: a diegetic-leaning holographic style specified in <code>docs/ART_BIBLE.md</code>, consistent across HUD, map, market and outfitter.</li>
+      <li><code class="status">[]</code> Accessibility floor: colour-blind-safe faction palette, scalable UI, remappable controls, reduced-motion and reduced-shake options, subtitles for VO/alerts.</li>
+      <li><code class="status">[]</code> Onboarding: a short non-modal prompt chain covering flight, mining, combat and docking, skippable and never blocking.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Fog state survives reload with no regression to unknown; verified by a Playwright save-restore test.</li>
+      <li><code class="status">[]</code> Unit tests: discovery-state transitions, including that a sector can never move backwards from explored.</li>
+      <li><code class="status">[]</code> HUD/map render cost stays under 2&nbsp;ms/frame — React must not be re-rendering per simulation tick (assert render counts).</li>
+      <li><code class="status">[]</code> Every UI flow is fully keyboard-navigable; automated axe accessibility scan passes on all menus.</li>
+      <li><code class="status">[]</code> Fresh-player test: someone with no briefing reaches their first sale within 10 minutes.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase9.png" alt="a holographic star map interface where explored sectors glow with visible icons for stations and belts while unexplored sectors remain dark clouded voids, with a ship marker at the boundary">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase9.png — see prompt sheet</span></div>
+      <figcaption>The map is the progress bar. Its brightening is the game's clearest statement of "you did that".</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 10 — Cinematic look-dev and adaptive audio <code class="status">[]</code></h3>
+    <p>With every system present, spend a phase purely on the qualities the brief actually leads with: scale,
+       grandeur, and a soundtrack that knows what is happening.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Colour script per sector type — a distinct lighting and nebula palette for core, belt, deep, contested and anomaly space, so sectors are identifiable by light alone.</li>
+      <li><code class="status">[]</code> Volumetric depth pass: layered nebula sheets and dust motes producing genuine atmospheric perspective between foreground rocks and background planets.</li>
+      <li><code class="status">[]</code> Scale cues: parallax dust near the hull, sun-occlusion flare behaviour, and deliberate silhouette framing when approaching planets and stations.</li>
+      <li><code class="status">[]</code> Cinematic camera moments: undock reveal, first-entry-into-a-new-sector beat, kill-cam-adjacent explosion framing, and dock arrival — brief, skippable, never seizing control mid-combat.</li>
+      <li><code class="status">[]</code> Photo mode (cheap, high value): free camera, FOV/DoF/exposure sliders, HUD hide, PNG export.</li>
+      <li><code class="status">[]</code> <code>musicDirector.ts</code>: stem-layered adaptive score — ambient bed, exploration layer, tension layer, combat layer — crossfaded on a musical grid by a threat-level scalar, with a proper combat-exit tail rather than an abrupt cut.</li>
+      <li><code class="status">[]</code> Full ElevenLabs SFX pass: weapons, impacts, shields, docking clamps, alarms, UI, ambience per sector type.</li>
+      <li><code class="status">[]</code> Audio mixing: buses, ducking on explosions, distance attenuation, a low-pass "in-cockpit" filter, and per-category volume sliders.</li>
+      <li><code class="status">[]</code> Quality-tier auto-detection with a first-run benchmark, plus manual override in settings.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Side-by-side against the reference key art with a written gap analysis; the remaining gap must be a deliberate, documented choice rather than an unexamined shortfall.</li>
+      <li><code class="status">[]</code> All four quality tiers hold their frame targets on their target hardware.</li>
+      <li><code class="status">[]</code> Music transitions contain no audible clicks, and threat-level oscillation cannot cause rapid layer flapping (hysteresis asserted).</li>
+      <li><code class="status">[]</code> Total audio payload under budget, with streaming for music stems rather than upfront decode.</li>
+      <li><code class="status">[]</code> Photo mode produces images good enough to be the project's own marketing — a blunt but honest test of whether the look landed.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase10.png" alt="a wide cinematic composition of a small ship dwarfed by an enormous ringed planet with volumetric light shafts lens flare and layered nebula depth, emphasising scale and grandeur">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase10.png — see prompt sheet</span></div>
+      <figcaption>Scale is composition, not polygons: a small ship, an enormous world, and light doing the work.</figcaption>
+    </figure>
+  </div>
+
+  <div class="phase">
+    <h3>Phase 11 — Persistence, balance, hardening, and slice release <code class="status">[]</code></h3>
+    <p>Make it a thing other people can play. Save/load, an honest balance pass, performance hardening, and a
+       deployed build with a feedback path.</p>
+    <h4>Tasks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Save system: versioned schema in IndexedDB — seed, player state, fog set, reputation, hangar, fittings, cargo, discovered POIs — with migration support and export/import to a JSON file.</li>
+      <li><code class="status">[]</code> Autosave on dock and on sector transition; manual save slots; corruption-tolerant load with a clear failure message rather than a white screen.</li>
+      <li><code class="status">[]</code> Balance pass driven by <code>docs/BALANCE.md</code>: ore values, mining rates, module costs, ship prices, ambush frequency, repair costs — tuned so the first hour has a clear progression arc.</li>
+      <li><code class="status">[]</code> Performance hardening: draw-call audit, texture-memory audit, GC-pressure audit (pool everything hot), and a 30-minute soak with no memory growth.</li>
+      <li><code class="status">[]</code> Loading experience: progressive asset loading with a real progress bar and a playable-as-soon-as-possible first sector.</li>
+      <li><code class="status">[]</code> Error resilience: WebGL context-loss recovery, asset-load failure fallbacks, and a global error boundary that offers a save export before reload.</li>
+      <li><code class="status">[]</code> Deploy: static hosting with immutable asset hashing; a public URL.</li>
+      <li><code class="status">[]</code> Complete <code>docs/GDD.md</code> — the design document deliverable from the original brief, now describing a game that exists rather than one that is hoped for.</li>
+      <li><code class="status">[]</code> Milestone-2 backlog written from playtest evidence: missile swarms, cloaking device, more sectors and factions, station missions, multi-system jumps.</li>
+    </ul>
+    <h4>Testing strategy — loop until every check passes before advancing</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Save-schema round-trip tests including a forced migration from a prior version.</li>
+      <li><code class="status">[]</code> Playwright end-to-end: boot → undock → mine → fight → dock → sell → upgrade → save → reload → state intact.</li>
+      <li><code class="status">[]</code> 30-minute soak: no memory growth, no frame-time drift, no leaked WebGL resources.</li>
+      <li><code class="status">[]</code> Cold-load to playable under 15&nbsp;s on a 20&nbsp;Mbps connection.</li>
+      <li><code class="status">[]</code> At least 3 external playtesters complete the core loop unassisted; their friction points are recorded, not rationalised away.</li>
+      <li><code class="status">[]</code> Cross-browser: Chrome, Edge, Firefox, Safari — all playable at some quality tier.</li>
+    </ul>
+    <p class="legend">If a check cannot be made to pass after reasonable effort, mark the phase
+      <code class="status" data-st="f">[f]</code> and record why in Notes rather than looping forever.</p>
+    <figure>
+      <img src="solar-frontier/phase11.png" alt="a browser window frame containing the finished game showing a ship in an asteroid belt with a full heads up display, presented as a shippable playable product">
+      <div class="fig-pending"><b>Image pending</b><span class="hint">phase11.png — see prompt sheet</span></div>
+      <figcaption>The actual deliverable: a URL someone else can open and play through the whole loop.</figcaption>
+    </figure>
+  </div>
+
+</section>
+
+<section id="validation">
+  <h2>Global validation commands — final gate (run after all phases show [x])</h2>
+  <ul class="checklist">
+    <li><code class="status">[]</code> <code>pnpm typecheck</code> — TypeScript strict, zero errors, no <code>@ts-ignore</code> added during the slice.</li>
+    <li><code class="status">[]</code> <code>pnpm lint</code> — ESLint clean, zero warnings at the configured level.</li>
+    <li><code class="status">[]</code> <code>pnpm test</code> — full Vitest suite green (flight integrator, procgen determinism, economy, reputation, save migration, fog transitions).</li>
+    <li><code class="status">[]</code> <code>pnpm test:e2e</code> — Playwright full-loop and save-restore specs green in all target browsers.</li>
+    <li><code class="status">[]</code> <code>pnpm build</code> — production build succeeds; JS &lt; 2&nbsp;MB gzipped and total assets &lt; 30&nbsp;MB, enforced by the budget assertion.</li>
+    <li><code class="status">[]</code> <code>pnpm test:perf</code> — deterministic camera-path probe meets the frame target at every quality tier.</li>
+    <li><code class="status">[]</code> <code>pnpm validate:data</code> — every <code>src/data/*.json</code> passes schema validation.</li>
+    <li><code class="status">[]</code> <code>pnpm verify:offline</code> — cross-phase integration check: production build serves and plays with every AI endpoint blocked and ComfyUI/Blender stopped, and no API key or AI endpoint string is present in the bundle.</li>
+    <li><code class="status">[]</code> <code>pnpm audit --prod</code> — no high-severity dependency advisories.</li>
+  </ul>
+  <p class="legend">Same loop discipline as per-phase checks: nothing is done until every command here passes.</p>
+</section>
+
+<section id="questionables">
+  <h2>Questionables</h2>
+  <ul>
+    <li><b>Assumption:</b> "Photorealistic" is accepted as <em>cinematic-realistic within browser limits</em> —
+        PBR materials, volumetrics, heavy post-processing — not offline-render parity with the reference still.
+        — <b>Why it matters:</b> if literal parity is required, the Web/R3F engine choice is wrong and this
+        plan should be rewritten for Unreal Engine 5. — <b>Resolved:</b> <code class="status">[]</code> open</li>
+    <li><b>Assumption:</b> Project name <b>SOLAR FRONTIER</b> and repo path <code>H:\solar-frontier</code> are
+        placeholders chosen by this plan. — <b>Why it matters:</b> renaming after Phase 2 means touching the
+        asset manifest, package name and deploy target. — <b>Resolved:</b> <code class="status">[]</code> open</li>
+    <li><b>Assumption:</b> Single-player only; no networking, accounts or leaderboards in scope. —
+        <b>Why it matters:</b> multiplayer is an architectural decision, not a feature — retrofitting it later
+        means rewriting the simulation layer. — <b>Resolved:</b> <code class="status">[]</code> open</li>
+    <li><b>Assumption:</b> Desktop browser is the target; mobile/touch is explicitly out of scope for the slice.
+        — <b>Why it matters:</b> mobile changes the control scheme, the UI layout and the entire quality-tier
+        floor. — <b>Resolved:</b> <code class="status">[]</code> open</li>
+    <li><b>Assumption:</b> Tripo3D output can be normalised into game-ready hulls via Blender-MCP cleanup at
+        acceptable quality. — <b>Why it matters:</b> if not, ship art falls back to kitbashed procedural
+        geometry or purchased packs, and Phase 2 gains a week. — <b>Resolved:</b> <code class="status">[]</code> open
+        (this is precisely what the Phase-2 spike answers)</li>
+    <li><b>Assumption:</b> Generated assets from these tools are licensed for the intended use (including any
+        commercial release). — <b>Why it matters:</b> a licence problem discovered post-launch is far more
+        expensive than one discovered in Phase 2; the manifest records provenance for exactly this reason. —
+        <b>Resolved:</b> <code class="status">[]</code> open</li>
+    <li><b>Assumption:</b> "Complete game" is satisfied by a polished, complete <em>loop</em> in one system,
+        with breadth added in Milestone 2 — rather than by all briefed content existing at once. —
+        <b>Why it matters:</b> this is the plan's central scoping bet and the operator has already endorsed it;
+        recording it so it is never quietly reinterpreted later. — <b>Resolved:</b>
+        <code class="status" data-st="x">[x]</code> confirmed (AskUserQuestion, 2026-07-26)</li>
+    <li><b>Assumption:</b> Fog of war operates at whole-sector granularity with a sub-sector reveal mask, not
+        per-cubic-kilometre voxel fidelity. — <b>Why it matters:</b> finer granularity multiplies save size and
+        map render cost for little perceptual gain. — <b>Resolved:</b> <code class="status">[]</code> open</li>
+  </ul>
+</section>
+
+<section id="notes">
+  <h2>Notes</h2>
+  <h3>Why not Unreal Engine 5</h3>
+  <p>UE5 is the correct answer to "photorealistic space game" in isolation, and it was offered first. The
+     operator chose Web/R3F, which is a coherent trade: instant shareability, dramatically faster AI-assisted
+     iteration, no multi-GB engine install, no cook/build cycle — in exchange for a lower ceiling on raw
+     fidelity. This plan therefore spends its rendering effort where a browser can still win: lighting,
+     volumetrics, composition, post-processing and scale contrast. Those are what actually sell the reference
+     image; Nanite-density geometry is not. That is the honest version of the trade, and it should be revisited
+     only if the Phase-1 look-dev check comes back unacceptable — in which case, mark Phase 1
+     <code class="status" data-st="f">[f]</code> and re-plan for UE5 rather than grinding at a ceiling.</p>
+
+  <h3>The build boundary is the most important rule in this plan</h3>
+  <p>Tripo3D, ComfyUI, Blender-MCP, ElevenLabs and OpenAI are extraordinary force multipliers for a solo
+     developer — an entire art and audio department reachable from a script. They are also, every one of them,
+     a network dependency with variable latency, credit cost and non-deterministic output. The single rule that
+     keeps this project shippable: <b>they run at build time, on your machine, and their output is committed as
+     static files.</b> The browser never learns they exist. <code>pnpm verify:offline</code> exists to make
+     violating that rule fail loudly rather than silently.</p>
+  <p>This also keeps the game repo's practice aligned with the spirit of the harness's own N8 constraint. N8
+     governs FABLE-HARNESS's operation, not the game's authoring tools — the game repo is free to use MCP and
+     network APIs at build time. But the same reasoning applies to both: a thing that must run should not
+     depend on a service that might not be there.</p>
+
+  <h3>Sequencing rationale</h3>
+  <p>Two risks are pulled to the front deliberately. Phase 1 answers "can a browser look like the reference
+     art?" and Phase 2 answers "can AI tools produce usable game assets?" — both before a single gameplay
+     system is written. If either answer is no, the plan changes cheaply. Every other phase is ordered by
+     dependency: flight before world (you need something to fly), world before mining (rocks need somewhere to
+     be), mining before combat (the thing worth fighting over must exist), combat before AI (behaviours need
+     verbs), AI before economy (prices need a reason to move), and fog last among the systems because it keys
+     off a sector graph that only exists after Phase 4.</p>
+
+  <h3>What is deliberately deferred to Milestone 2</h3>
+  <p>Missile swarms, the cloaking device, multi-system jump travel, station missions/contracts, a fourth and
+     fifth faction, capital-ship encounters, ship interiors, crew, and any form of narrative campaign. All are
+     architected for — the module system, ability system, faction matrix and sector graph each have room —
+     none are built in the slice. Recording this explicitly so their absence reads as a decision rather than an
+     oversight.</p>
+
+  <h3>Performance is a design constraint, not a phase</h3>
+  <p>The three rules that matter most, stated once so every phase can be checked against them: simulation state
+     lives in the ECS and never in React state; everything spawned frequently (projectiles, debris, particles,
+     asteroid instances) comes from a pool; and the instanced-rendering path is the default for anything that
+     appears more than a dozen times. Violating any of these is cheap to do and expensive to undo, which is why
+     each phase's checks assert against them rather than leaving performance to a cleanup pass.</p>
+  <figure>
+    <img src="solar-frontier/notes.png" alt="a core gameplay loop diagram as a circle with five labelled nodes explore, mine, fight, dock, upgrade, with arrows returning to explore and a fog of war ring expanding outward around the circle">
+    <div class="fig-pending"><b>Image pending</b><span class="hint">notes.png — see prompt sheet</span></div>
+    <figcaption>The core loop the vertical slice must close completely: explore → mine → fight → dock → upgrade → explore further.</figcaption>
+  </figure>
+</section>
+
+<section id="amendments">
+  <h2>Amendments</h2>
+  <details class="amend">
+    <summary>2026-07-26 — Phase 1: single-camera render-order/depth policy replaces the planned three-camera compositing layer, for this phase only</summary>
+    <p><b>Plan text amended:</b> Phase 1 task "Three-layer camera compositing (far/mid/near) with independent
+      near/far planes and depth clear between layers" (line 319 as originally written).</p>
+    <p><b>What actually shipped in Phase 1:</b> far/mid/near are expressed as render-order constants plus a
+      depth-test/depth-write policy under a single camera (see <code>src/render/layers.ts</code> in the game
+      repo), not three independently-configured cameras with per-layer depth clears.</p>
+    <p><b>Rationale:</b> for a static scene with no floating-origin precision problem yet, the single-camera
+      policy is behaviourally identical to the three-camera version and is materially less machinery to stand
+      up and test. The genuine multi-camera split is deferred to Phase 4, where it starts actually earning its
+      cost (floating origin lands in the same phase).</p>
+    <p><b>Accepted by:</b> release-planner (4.11), on the documented rationale already present in
+      <code>src/render/layers.ts</code>. <b>Condition:</b> Phase 4's plan text and exit checks must explicitly
+      require the true three-camera split before Phase 4 can be marked complete — this amendment authorizes
+      the Phase 1 shortcut only, not a permanent scope reduction of the original architecture.</p>
+  </details>
+  <details class="amend">
+    <summary>2026-07-26 — Phase 1: WebGL2 baseline with a WebGPU capability-detection seam replaces "WebGPU with feature-detected WebGL2 fallback"</summary>
+    <p><b>Plan text amended:</b> Phase 1 task "<code>Renderer.tsx</code>: WebGPU with feature-detected WebGL2
+      fallback; ACES Filmic tone mapping; sRGB output; adaptive DPR clamp" (line 318), and the corresponding
+      testing-strategy check "Both WebGPU and forced-WebGL2 paths render visually equivalent frames
+      (side-by-side screenshot review)" (line 330).</p>
+    <p><b>What actually shipped in Phase 1:</b> WebGL2 is the only rendering backend. ACES Filmic tone mapping,
+      sRGB output colour space, and the adaptive DPR clamp are all implemented on the WebGL2 path.
+      <code>detectCapabilities()</code> in <code>src/render/quality.ts</code> reports <code>navigator.gpu</code>
+      presence as a capability seam, but nothing in Phase 1 renders through it.</p>
+    <p><b>Rationale:</b> <code>@react-three/postprocessing</code>/<code>postprocessing</code> — the mature,
+      battle-tested effect stack this phase depends on for selective bloom, DoF, god rays, chromatic
+      aberration, film grain, vignette and SMAA — is WebGL-only. three.js's WebGPU path requires TSL-based
+      post-processing, which is materially less mature; proving the cinematic look with the mature stack first
+      was judged higher priority than a same-phase dual-backend implementation.</p>
+    <p><b>Consequence for the testing-strategy check at line 330:</b> that check cannot be executed as written
+      in Phase 1 because there is no WebGPU rendering path to compare against yet. It is superseded, for Phase
+      1 only, by: "WebGL2 path renders with no console errors/warnings in Chrome, Firefox and Safari" (folded
+      into the existing boot-console check) plus "capability-detection seam (<code>caps.webgpu</code>) is
+      exercised by a unit test, with no runtime behaviour gated on it yet." The dual-backend visual-equivalence
+      check is deferred to whichever later phase first renders through WebGPU.</p>
+    <p><b>Accepted by:</b> release-planner (4.11), on the documented rationale already present in
+      <code>src/render/quality.ts</code>. <b>Condition:</b> the WebGPU seam must remain exercised (capability
+      detected, never silently dead code) so a future phase can wire a real WebGPU render path without
+      re-deriving detection from scratch.</p>
+  </details>
+  <details class="amend" open>
+    <summary>2026-07-26 — Phase 1: GlobalBloom replaces SelectiveBloom due to upstream dependency-array render-loop regression (docs-author, stage 4.13, run 20260726-225631-p1-render-loop-and-lighting)</summary>
+    <p><b>What changed:</b> <code>PostFX.tsx</code> imports and renders <code>Bloom</code> (global) instead of
+      <code>SelectiveBloom</code> (selective), with all other effect parameters (threshold, radius, intensity,
+      mipmapBlur) unchanged.</p>
+    <p><b>Why:</b> @react-three/postprocessing v3.0.4's <code>SelectiveBloom</code> wrapper includes a
+      freshly-created rest-spread props object in its internal <code>useMemo</code> dependency array, which
+      defeats memoization and reconstructs the underlying postprocessing <code>Effect</code>/<code>Selection</code>
+      on every component render. Each reconstruction allocates a render-layer ID from postprocessing's
+      module-level singleton counter (2..31, 30 slots total). Before the counter exhausts, React emits
+      "Maximum update depth exceeded" errors and the scene enters an infinite render loop, rendering thousands of
+      console messages per 40 seconds of idle time. The mitigation of wrapping PostFX in <code>React.memo</code>
+      and memoizing the <code>lights</code> array (applied in run 20260726-221514) proved insufficient — the loop
+      persisted because the underlying Effect reconstruction was independent of PostFX's own memoization. Switching
+      to global Bloom eliminates the upstream churn without sacrificing perceptual quality: Phase 1's emissive
+      sources are sparse (sun disc, sun flare, planet rim only), so selective vs global bloom precision makes no
+      practical difference in cost or look at this scope.</p>
+    <p><b>Consequence:</b> <code>PostFXProps</code> no longer requires a <code>sunLightRef</code> prop (Bloom does
+      not need it; the prior SelectiveBloom required it to avoid spamming "SelectiveBloom requires lights to work"
+      warnings). Scene.tsx updated to not pass this prop. <code>ART_BIBLE.md</code> "Post-processing tuning"
+      section updated to document the Bloom choice and its rationale.</p>
+    <p><b>Recorded by:</b> 4.13-docs-author, as documentation of the render-loop regression resolution. (Stage 4.8/engineer did not execute in this run; this amendment records the code changes and their rationale for governance purposes.)</p>
+  </details>
+  <details class="amend" open>
+    <summary>2026-07-26 — Phase 1: TypeScript pinned to 6.0.3, not the previously-installed 7.0.2 (engineer, stage 4.8, run 20260726-213456-p1-render-foundation)</summary>
+    <p><b>What changed:</b> the game repo's <code>typescript</code> devDependency was downgraded from
+      <code>7.0.2</code> to <code>6.0.3</code> (latest pre-7 stable). <code>typescript-eslint</code> stays at
+      <code>8.65.0</code> as already installed.</p>
+    <p><b>Why:</b> <code>typescript-eslint</code> — including its <code>canary</code> tag, checked live during
+      this stage — hard-refuses to load against TypeScript &ge;7.0
+      (<a href="https://github.com/typescript-eslint/typescript-eslint/issues/10940">typescript-eslint#10940</a>,
+      open, no TS-7-compatible release published as of this stage). With TypeScript 7.0.2 installed,
+      <code>pnpm run lint</code> — one of the five Phase 1 CI checks explicitly required by this stage's
+      dispatch — failed unconditionally, before any project code was even parsed. This was discovered during
+      implementation, not pre-flagged by the caller alongside the other two deviations.</p>
+    <p><b>Consequence:</b> with TypeScript 6.0.3, <code>pnpm run typecheck</code>, <code>pnpm run lint</code>,
+      <code>pnpm run test</code>, <code>pnpm run build</code> and <code>pnpm run test:budget</code> all pass,
+      mechanically, as verified in this stage. Nothing in the Phase 1 tree uses a TypeScript-7-only language
+      feature, so no source code had to change for the downgrade itself (only <code>tsconfig.json</code>'s
+      <code>baseUrl</code> removal and <code>vite.config.ts</code>'s <code>manualChunks</code> function-form
+      conversion, both separately required by the TS7/rolldown toolchain already in place and unrelated to this
+      downgrade).</p>
+    <p><b>Accepted by:</b> engineer (4.8), as the only way found to satisfy the explicitly required "lint"
+      CI check with the tooling available today. <b>Flagged for explicit verifier/judge sign-off</b> — unlike
+      the two amendments above, this one was not pre-authorized in the dispatch that requested this stage.
+      <b>If rejected:</b> the alternatives are (a) accept a broken/disabled lint CI step until
+      <code>typescript-eslint</code> ships TS-7 support upstream, or (b) replace the ESLint TypeScript
+      integration with a different TS-7-compatible one; reverting to TypeScript 7.0.2 with
+      <code>typescript-eslint</code> as currently installed is not an option that keeps <code>pnpm run lint</code>
+      green.</p>
+  </details>
+  <details class="amend" open>
+    <summary>2026-07-27 — Correction: the GlobalBloom-replaces-SelectiveBloom amendment's "without sacrificing perceptual quality" claim was unearned (engineer, stage 4.8, run 20260726-235633-p1-planet-shader)</summary>
+    <p><b>What this corrects:</b> the amendment immediately above dated 2026-07-26 ("Phase 1:
+      GlobalBloom replaces SelectiveBloom...") states, in its "Why" paragraph, that switching to
+      global <code>Bloom</code> "eliminates the upstream churn without sacrificing perceptual
+      quality" because "selective vs global bloom precision makes no practical difference in cost
+      or look at this scope." That sentence is not corrected in place — per this document's
+      append-only amendment convention, the original entry above is left standing and this entry
+      records the correction instead.</p>
+    <p><b>Why it was wrong:</b> a subsequent pass on this same lineage (run
+      <code>20260726-225631-p1-render-loop-and-lighting</code>, stage 4.8-engineer retry 2, cross-
+      vendor reject C5) worked the actual arithmetic: <code>Starfield.tsx</code>'s per-star colour
+      channel is <code>baseColor * (0.35 + brightness^3 * 0.9)</code>, so every star (even
+      <code>brightness = 0</code>) has a raw channel value <code>&gt;= 0.35</code> — comfortably
+      above global <code>Bloom</code>'s <code>luminanceThreshold</code> of <code>0.15</code> — and
+      the brightest stars reach <code>~1.25</code>, brighter in raw value than the sun disc itself.
+      Under plain <code>Bloom</code>, stars are <b>not</b> excluded from bloom the way
+      <code>SelectiveBloom</code>'s <code>&lt;Select&gt;</code>/<code>&lt;Selection&gt;</code>
+      scene-membership boundary previously excluded them; most of the 6000-point starfield now
+      blooms where it previously did not. There is no <code>luminanceThreshold</code> value that
+      catches the sun/planet-rim without also catching most of the starfield. "Makes no practical
+      difference in cost or look" was therefore an unverifiable, and very likely false, claim at
+      the time it was written — no agent in that lineage could render a frame to check it, and the
+      underlying maths says otherwise.</p>
+    <p><b>What is actually true instead:</b> the <code>SelectiveBloom -&gt; Bloom</code> swap remains
+      the correct and necessary fix for the Defect 1 render-loop regression (robustness against an
+      unconditional, self-sustaining React state loop is worth a changed bloom look), but it is a
+      <b>known, deliberate visual trade</b>, not a neutral one. Whether the resulting frame still
+      reads as intentional atmosphere rather than "too much sky glow" is a rendered-frame judgment
+      no agent in this harness can make (N8) — it is
+      UNVERIFIED-PENDING-OPERATOR-CONFIRMATION, not settled fact either way. See
+      <code>docs/ART_BIBLE.md</code>'s "Emissive Budget" item 3 and "Post-processing tuning" item 3
+      in the game repo for the corrected, honest account this correction is drawn from.</p>
+    <p><b>Recorded by:</b> engineer (4.8), flagged as a launch-blocking documentation-accuracy item
+      by this run's <code>4.10-test-strategy.md</code> §0 ("a governance-facing document asserting a
+      claim its own lineage's engineer disclosed as false is exactly the honesty-defect class this
+      run's dispatch already flagged once for <code>PostFX.tsx</code> — the same standard applies to
+      this file").</p>
+  </details>
+  <details class="amend" open>
+    <summary>2026-07-27 — Phase 1: the single-camera render-order/depth-policy amendment (first entry above) had a latent soundness gap; fixed, single-camera policy reaffirmed for now (engineer, stage 4.8, run 20260727-081003-p1-far-layer-queue)</summary>
+    <p><b>What this adds to (does not contradict) the first amendment above:</b> that entry's
+      rationale for the single-camera render-order/depth policy — "behaviourally identical to the
+      three-camera version" for a static scene — assumed every far-layer material actually followed
+      the documented contract consistently. This run found that assumption was false in practice:
+      <code>Starfield.tsx</code> was the only far-layer material with <code>transparent: true</code>,
+      which silently moved it into three.js's separate transparent render queue. Because three.js
+      renders the entire opaque queue first and the entire transparent queue second, unconditionally,
+      and <code>renderOrder</code> only sorts WITHIN a queue, the starfield always drew dead last —
+      after the hull, the asteroids, everything — and painted over all of them with
+      <code>depthTest: false</code>, regardless of its own <code>renderOrder</code> being the most
+      negative value in the layer. This is exactly the "single camera" tradeoff's failure mode: a
+      three-camera/multi-pass design with a real depth clear between passes cannot fail this way,
+      because compositing wouldn't depend on queue membership at all.</p>
+    <p><b>Decision — patched, not pulled forward:</b> the operator's dispatch for this run explicitly
+      asked engineer to judge whether this defect meant the render-order-only policy is fundamentally
+      unsound and the three-camera work should be pulled forward from Phase 4. Judgment: no, not yet.
+      The failure mode found here is a single, mechanically-checkable constraint (every far-layer
+      material must have <code>transparent: false</code>) with a one-line fix and a regression test
+      (<code>tests/unit/starfield.test.ts</code>) that makes a recurrence fail CI rather than silently
+      ship. It is a real gap the first amendment's "behaviourally identical" claim should have
+      accounted for, but it does not, on its own, invalidate the "far less machinery, still correct
+      for a static scene" cost/benefit judgment behind that amendment — it just means the "identical"
+      claim needed one more constraint attached to it, now documented in
+      <code>src/render/layers.ts</code>'s "CRITICAL CONSTRAINT" docstring and
+      <code>.claude/gotchas/web-engines.md</code> (FABLE-HARNESS repo) so it cannot silently
+      reoccur unnoticed. The condition attached to the first amendment above — Phase 4 must still
+      ship the true three-camera split before being marked complete — is unchanged by this entry.</p>
+    <p><b>Accepted by:</b> engineer (4.8), as an in-scope judgment call within this bug-fix stage's
+      dispatch (which explicitly authorized recommending the three-camera pull-forward if warranted).
+      <b>Flagged for explicit verifier/judge sign-off</b>, same as the TypeScript-pinning amendment
+      above — a decision NOT to pull architecture work forward is exactly the kind of scope judgment
+      that should not go unreviewed just because it resulted in less code changing.</p>
+  </details>
+  <details class="amend" open>
+    <summary>2026-07-27 — Phase 1 close-out: GodRays disabled on every tier — "god rays" ships as sun bloom only, not a named-but-nonfunctional effect (engineer, stage 4.8, run 20260727-090143-p1-lighting-close-out, Defect 3)</summary>
+    <p><b>Context — the four required close-out amendments for this run:</b> this stage's dispatch
+      required this document to record four decisions before the docs stage could be judged
+      complete: (1) far/mid/near as render-order + depth policy under a single camera, (2) WebGL2 +
+      pmndrs postprocessing rather than WebGPU-preferred, (3) <code>SelectiveBloom</code> replaced by
+      plain <code>Bloom</code>, and (4) the god-ray decision recorded in this entry. Items (1), (2)
+      and (3) are already present on disk, appended by earlier stages in this same lineage — see,
+      respectively, the "Phase 1: single-camera render-order/depth policy..." amendment (and its
+      "latent soundness gap" follow-up), the "Phase 1: WebGL2 baseline with a WebGPU
+      capability-detection seam..." amendment, and the "Phase 1: GlobalBloom replaces
+      SelectiveBloom..." amendment (with its "without sacrificing perceptual quality" correction),
+      all above in this section. This entry supplies the fourth and completes the set.</p>
+    <p><b>What changed:</b> <code>src/render/quality.ts</code>'s <code>QUALITY</code> table now sets
+      <code>godRays: false</code> on every tier (<code>low</code> already had it off; <code>medium</code>,
+      <code>high</code> and <code>ultra</code> are changed from <code>true</code> to <code>false</code>).
+      <code>PostFX.tsx</code>'s <code>GodRays</code> JSX, its wiring, its tuning values and
+      <code>tests/unit/godRays.test.ts</code>'s regression coverage are all left in place, purely
+      gated off by <code>settings.godRays</code> — this is a disable, not a removal, so a future
+      look-dev pass can re-enable it without re-deriving the wiring.</p>
+    <p><b>Why — an explicit call, not a fourth blind tuning pass:</b> three consecutive runs tuned
+      GodRays' <code>exposure</code>/<code>decay</code>/<code>density</code>/<code>weight</code>
+      parameters with no confirmed visible shafts, the last of which explicitly recommended capturing
+      a real GPU frame before tuning a fourth time rather than guessing again. This run instead
+      re-examined the compositing chain and found the true cause is structural, not a parameter this
+      stage failed to find: <code>GodRaysEffect</code> only produces a shaft where a depth-WRITING
+      occluder overlaps the sun's projected screen position (see
+      <code>.claude/gotchas/web-engines.md</code>'s "[observed] <code>GodRaysEffect</code> only makes
+      shafts where a depth-writing occluder is near the light on screen" entry, FABLE-HARNESS repo).
+      This scene's entire far layer sets <code>depthWrite: false</code> unconditionally by the
+      documented FAR_LAYER contract (<code>src/render/layers.ts</code>), and no mid/near geometry
+      (the hull, the asteroid belt) sits near the sun's on-screen position in this composition — so no
+      tuning value, however chosen, could ever have produced a visible shaft here.</p>
+    <p><b>The decision, and the rejected alternative:</b> two options were available — (a) introduce a
+      depth-writing occluder that partially crosses the sun disc on screen, so shafts can actually
+      form; or (b) accept that Phase 1 ships with sun bloom and no distinct shafts, and disable
+      GodRays rather than ship a silently ineffective effect that still costs a full-screen raymarch
+      pass for zero visible result. This entry chooses (b). Option (a) was rejected specifically
+      because no agent in this harness can render a frame (N8) to verify where new occluder geometry
+      would actually land on screen relative to the sun disc — placing it blind would be exactly the
+      "compounding tweaks without verification" anti-pattern this run's own dispatch warned against,
+      applied to geometry instead of numeric parameters. "God rays" is a named Phase 1 task-list item;
+      shipping it silently disabled without this record would be a false claim of completion — this
+      amendment exists specifically so that is not what happened.</p>
+    <p><b>Accepted by:</b> engineer (4.8), as the explicit disposition call this stage's dispatch
+      required rather than permitted to be skipped. <b>Flagged for explicit verifier/judge sign-off</b>,
+      same as the two scope-judgment amendments above — accepting a named feature as "will not ship
+      functional in Phase 1" is a product-facing decision, not a purely mechanical one.
+      <b>If rejected:</b> the alternative is option (a) above (a depth-writing occluder near the sun on
+      screen), which requires operator-verified real-GPU placement before it can be judged to have
+      actually produced shafts — it cannot be attempted honestly as a blind, unverified change.</p>
+  </details>
+</section>
+
+</div>
+</body>
+</html>
+

@@ -6,8 +6,8 @@ This is the single source of truth for how FABLE-HARNESS assigns models. Any age
 
 | Tier | Used for |
 |---|---|
-| Haiku | Cheap classifiers/routers/triage: `triage`, `profile-loader`, `taxonomy-mapper`, `judge-router`, `missability-inspector`, `docs-author`, `visual-regression-runner`. |
-| Sonnet | Default workhorse: most generation/implementation/review agents (`spec-author`, `engineer`, `api-designer`, `data-modeler`, `test-strategist`, `release-planner`, `ops-author`, `ai-controls-author`, `retirement-planner`, `discovery-researcher`, `designer`, `design-system-curator`, `reflexion-coach`, `oracle-evaluator`, `master-plan-patcher`, `run-finalizer`, `agents-md-author`, `governance-author`, `browser-validator`). |
+| Haiku | Cheap classifiers/routers/triage: `triage`, `profile-loader`, `taxonomy-mapper`, `judge-router`, `missability-inspector`, `visual-regression-runner`. |
+| Sonnet | Default workhorse: most generation/implementation/review agents (`spec-author`, `engineer`, `api-designer`, `data-modeler`, `test-strategist`, `release-planner`, `ops-author`, `ai-controls-author`, `retirement-planner`, `discovery-researcher`, `designer`, `design-system-curator`, `reflexion-coach`, `oracle-evaluator`, `master-plan-patcher`, `run-finalizer`, `agents-md-author`, `governance-author`, `browser-validator`, `docs-author`). |
 | Opus | Highest-stakes judging/architecture/security/synthesis: `judge-cross-vendor`, `verifier`, `meta-agent`, `strategy-author`, `architect`, `security-reviewer`. |
 
 ## Fable-5: never auto-routed — the full enforcement story

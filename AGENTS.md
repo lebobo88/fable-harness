@@ -61,6 +61,6 @@ specs/             top-level plan output from `plan`/`plan-deep` when no run is 
 ## Engineering standards
 
 - Build on `skills/`, not `commands/` (both still work; we standardize on skills for consistency).
-- Every producer agent's `tools:` allowlist is Read/Write/Edit/Glob/Grep/Bash + Task dispatch only — no MCP tool names anywhere in this repo (N8).
+- Every producer agent's `tools:` allowlist is Read/Write/Edit/Glob/Grep/Bash + Task dispatch only. The **single** permitted MCP namespace anywhere in this repo is `mcp__claude-in-chrome__*`, and only for observing a locally-served page (screenshots, console/network reads, JS evaluation, frame-time sampling) — see N8's narrow exception and `memory/decisions/2026-07-26-n8-chrome-mcp-exception.md`. It must stay non-load-bearing: detect its absence and degrade to an explicit `unverified` report. No other MCP namespace may appear in any agent allowlist, and this repo still registers no MCP server of its own.
 - Reflexion ×1, bounded-retry-then-escalate at 3 loops (N3) — never loop forever on a failing verification.
 - When revising an existing artifact: state Preserved Invariants vs Changed Behaviors explicitly (N9).

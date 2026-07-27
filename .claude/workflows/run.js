@@ -280,7 +280,43 @@ if (sectionsToRun.length === 0) {
   sectionsToRun.push('4.13')
 }
 
-const stageResults = await pipeline(sectionsToRun, (section) => runStage(section))
+// ---- Section scheduling: two dependency waves, NOT one flat concurrent pipeline.
+//
+// Most sections are genuinely independent and pipeline concurrently. But some sections'
+// artifacts DESCRIBE other sections' output rather than standing alone - §4.13
+// (docs/changelog/release notes) documents what §4.8 (engineer) actually built. Running
+// those concurrently means the docs producer writes a changelog for code that does not
+// exist on disk yet, and its judge then correctly rejects it for describing unearned work.
+//
+// That is a scheduling defect, not a judging defect: the judge is right every time. It was
+// observed as a false-negative "surfaced" run twice in a row (runs 20260726-213456 and
+// 20260726-221514, both SOLAR FRONTIER Phase 1) and is the same failure class already
+// recorded in memory/invariants.md for run 20260711-141439-p1-design-system.
+//
+// The barrier between waves is deliberate and is the justified case for one: wave 2 needs
+// EVERY wave-1 stage's files actually on disk before it can describe them truthfully.
+const DESCRIBES_OTHER_SECTIONS = new Set(['4.13'])
+
+const producingSections = sectionsToRun.filter((s) => !DESCRIBES_OTHER_SECTIONS.has(s))
+const describingSections = sectionsToRun.filter((s) => DESCRIBES_OTHER_SECTIONS.has(s))
+
+// When 4.13 is the ONLY mapped section (the trivial-scope taxonomy floor) it has nothing to
+// wait for and must run in wave 1, or the run would produce no stages at all.
+const wave1 = producingSections.length > 0 ? producingSections : describingSections
+const wave2 = producingSections.length > 0 ? describingSections : []
+
+const wave1Results = await pipeline(wave1, (section) => runStage(section))
+
+let wave2Results = []
+if (wave2.length > 0) {
+  log(
+    `Wave 1 complete (${wave1.join(', ')}). Running dependent section(s) ${wave2.join(', ')} ` +
+      `now that the code and artifacts they document are on disk.`
+  )
+  wave2Results = await pipeline(wave2, (section) => runStage(section))
+}
+
+const stageResults = [...wave1Results, ...wave2Results]
 
 // ---- Best-of-N for major scope on the engineering stage, via oracle-evaluator + worktrees.
 if (triage.scope === 'major' && sectionsToRun.includes('4.8')) {
@@ -295,7 +331,7 @@ if (triage.scope === 'major' && sectionsToRun.includes('4.8')) {
 // ---- Missability gate before finalize.
 phase('Missability')
 const missability = await agent(
-  `Run the 20-item missability checklist against run_id=${runId}'s archived artifacts before finalize. ` +
+  `Run the 21-item missability checklist against run_id=${runId}'s archived artifacts before finalize. ` +
     `The run directory is .fable/${runId}/ resolved from the FABLE-HARNESS project root (CLAUDE_PROJECT_DIR / repo root), ` +
     `NOT from any transient cwd. Both .fable/${runId}/taxonomy_map.json and the .fable/${runId}/artifacts/ directory DO ` +
     `exist for this run: FIRST Glob .fable/${runId}/artifacts/* to enumerate the actual artifact files and read ` +
@@ -319,13 +355,44 @@ if (unresolvedStages.length > 0) {
   return { runId, status: 'surfaced', taxonomy, stageResults, missability, unresolvedStages }
 }
 
-// ---- Finalize: patch PROJECT_MASTER.md, write run summary, archive best-of-N losers.
+// ---- Finalize.
+//
+// master-plan-patcher is dispatched HERE, by the workflow, rather than from inside
+// run-finalizer. This is not a style preference - it is a hard constraint:
+// Workflow-dispatched subagents do not receive nested agent-spawning capability, so
+// `run-finalizer` cannot dispatch another typed agent no matter what its frontmatter
+// declares. Its `tools:` line lists `Task`, but that tool is simply absent at runtime.
+//
+// Before this fix the finalize path was STRUCTURALLY UNREACHABLE: run-finalizer would
+// correctly refuse (per N7, it must never patch PROJECT_MASTER.md inline in place of the
+// typed agent; per N4, it must not write status:finalized over a step it could not
+// complete), so *every run in this harness's history* ended unfinalized - no
+// summary.json anywhere, no .fable/runs.jsonl, no PROJECT_MASTER.md. The agent was
+// behaving correctly; the orchestration was wrong.
+//
+// run.js DOES have agent(), so dispatching the typed master-plan-patcher from here
+// satisfies N7 properly and leaves run-finalizer with only work it can actually do.
+phase('Finalize')
+await agent(
+  `Patch (or create) PROJECT_MASTER.md for the calling project from run_id=${runId}'s archived artifacts, ` +
+    `mapping this run's taxonomy sections (${taxonomy.sections.join(', ')}) onto PROJECT_MASTER.md's ` +
+    `corresponding sections per taxonomy_blueprint.md Section 9. The run directory is .fable/${runId}/ ` +
+    `resolved from the FABLE-HARNESS project root. This dispatch replaces the call run-finalizer used to ` +
+    `make itself - run-finalizer no longer performs this step and will verify your output rather than repeat it.`,
+  { agentType: 'master-plan-patcher', phase: 'Finalize', label: 'master-plan-patch' }
+)
+
 // run-finalizer independently re-derives run health from disk (N7 provenance) and may still
 // refuse even if the checks above passed - ALWAYS trust its actual returned decision, never
 // hardcode a 'finalized' status just because the dispatch itself completed without error.
-phase('Finalize')
 const finalized = await agent(
-  `Finalize run_id=${runId}: write the run summary, call master-plan-patcher, archive any best-of-N losers, and update .fable/runs.jsonl. Return whether finalization actually succeeded (finalized: true) or was refused (finalized: false) per your own independent disk-based checks, and why.`,
+  `Finalize run_id=${runId}: write the run summary, archive any best-of-N losers, and update .fable/runs.jsonl. ` +
+    `NOTE: master-plan-patcher has ALREADY been dispatched by the workflow driver immediately before you ` +
+    `(it cannot be dispatched from inside you - Workflow subagents have no nested agent-spawning tool, ` +
+    `which is why this step moved). Do NOT attempt to dispatch it and do NOT treat its absence from your ` +
+    `own toolset as a blocker. VERIFY its work landed by checking PROJECT_MASTER.md on disk, and refuse ` +
+    `(finalized: false) if it did not. Return whether finalization actually succeeded (finalized: true) or ` +
+    `was refused (finalized: false) per your own independent disk-based checks, and why.`,
   { agentType: 'run-finalizer', phase: 'Finalize', label: 'finalize', schema: FINALIZE_SCHEMA }
 )
 
