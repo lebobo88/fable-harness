@@ -112,7 +112,7 @@ figure:has(img) .fig-pending { display: none; }
 
 <header class="plan-head">
   <h1>SOLAR FRONTIER — cinematic web space sim, vertical slice</h1>
-  <p class="subtitle">A browser-native open-world space game — fly, mine, fight, trade, and burn back the fog of war — built on React Three Fiber with a build-time AI asset pipeline (Tripo3D · ComfyUI · Blender · ElevenLabs · OpenAI), delivered first as one fully playable sector.</p>
+  <p class="subtitle">A browser-native open-world space game — fly, mine, fight, trade, and burn back the fog of war — built on React Three Fiber with a local-first build-time AI asset pipeline (ComfyUI/TRELLIS2 · Blender · ElevenLabs, with paid APIs approval-gated), delivered first as one fully playable sector.</p>
 </header>
 
 <details class="meta" open>
@@ -223,13 +223,47 @@ figure:has(img) .fig-pending { display: none; }
         placement, mineral distribution, outpost sites, pirate den locations. The seed goes in the save file,
         so a world is a 20-byte string, bug reports are reproducible, and the vertical slice's sector can be
         pinned to one hand-tuned seed while the generator keeps working for the full system later.</li>
-    <li><b>Offline AI asset pipeline.</b> A <code>tools/</code> workspace in the game repo drives Tripo3D
-        (text/image → GLB hulls), local ComfyUI (PBR texture sets, skybox cubemaps, UI art, station decals),
-        Blender via MCP on <code>:9876</code> (retopo, decimate, LOD chain, collision proxies, pivot/scale
-        normalisation, GLB export), ElevenLabs (SFX + music stems) and OpenAI images (concept passes feeding
-        Tripo3D's image-to-3D). Every artifact is committed or LFS-tracked as a finished static file with a
-        manifest recording its provenance and generation parameters. <b>The shipped game makes zero AI API
-        calls and runs fully offline.</b></li>
+    <li><b>Offline AI asset pipeline — local-first, with gated escalation.</b> A <code>tools/</code>
+        workspace in the game repo drives generation. <b>Local ComfyUI is the primary generator for both
+        3D and images</b> (see the tool-priority ladder below), Blender via MCP on <code>:9876</code> does
+        all mesh cleanup (retopo, decimate, LOD chain, collision proxies, pivot/scale normalisation, GLB
+        export), and ElevenLabs produces SFX and music stems. Every artifact is committed or LFS-tracked as
+        a finished static file with a manifest recording its provenance and generation parameters.
+        <b>The shipped game makes zero AI API calls and runs fully offline.</b>
+        <br><br>
+        <b>Tool-priority ladder (revised 2026-07-27 — see Amendments).</b> The ordering is deliberate:
+        local generation is free, private, unmetered and reproducible; paid APIs are none of those. Each
+        rung is used only when the one above it genuinely cannot deliver, and the two paid rungs require
+        explicit operator approval <em>per use</em>, never standing consent.
+        <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:.92em">
+          <tr><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">Asset kind</th>
+              <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">1 — primary</th>
+              <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">2 — fallback</th>
+              <th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border)">3 — approval required</th></tr>
+          <tr><td style="padding:4px 8px"><b>3D meshes</b></td>
+              <td style="padding:4px 8px"><b>ComfyUI + TRELLIS2</b>, local</td>
+              <td style="padding:4px 8px">—</td>
+              <td style="padding:4px 8px">Tripo3D API — <b>explicit approval only</b></td></tr>
+          <tr><td style="padding:4px 8px"><b>Images</b><br><span class="legend">concept art, PBR maps, skyboxes, UI</span></td>
+              <td style="padding:4px 8px"><b>ComfyUI</b>, local</td>
+              <td style="padding:4px 8px"><code>agy</code> CLI (Gemini) — when higher fidelity is genuinely needed</td>
+              <td style="padding:4px 8px">OpenAI image API — <b>explicit approval only</b></td></tr>
+          <tr><td style="padding:4px 8px"><b>Audio</b></td>
+              <td style="padding:4px 8px">ElevenLabs (SFX + music stems)</td>
+              <td style="padding:4px 8px">—</td>
+              <td style="padding:4px 8px">—</td></tr>
+          <tr><td style="padding:4px 8px"><b>Mesh cleanup / export</b></td>
+              <td style="padding:4px 8px">Blender MCP <code>:9876</code>, local</td>
+              <td style="padding:4px 8px">—</td>
+              <td style="padding:4px 8px">—</td></tr>
+        </table>
+        <b>Hardware constraint — this is a real design input, not a footnote.</b> TRELLIS2 runs on a single
+        <b>RTX 3080 Ti with 12 GB VRAM</b>. That is enough for the model but leaves little headroom, so the
+        3D pipeline must assume it: sequential (never concurrent) generation, explicit VRAM teardown between
+        jobs, model offload/low-VRAM mode enabled, conservative output resolution and voxel/latent
+        resolution, and a documented fallback when a job OOMs. A pipeline that only works with 24 GB is not
+        a pipeline we have. Phase 2's spike must establish the actual working settings and record the
+        measured peak VRAM per job kind.</li>
     <li><b>Asteroids are procedural, not modelled.</b> Icosphere + 3-octave simplex displacement, generated in
         a Web Worker, rendered via <code>InstancedMesh</code> with 3 LODs and per-instance material tinting by
         mineral type. Thousands of unique-looking rocks for a few hundred KB — this is strictly better than
@@ -294,7 +328,9 @@ figure:has(img) .fig-pending { display: none; }
     <li><code>src/ui/{Hud,Targeting,CargoBay,StationView,Market,Outfitter,Shipyard,StarMap,Settings}.tsx</code> — React UI shell.</li>
     <li><code>src/ui/fog/fogTexture.ts</code> — the persistent discovery mask backing the star map reveal.</li>
     <li><code>src/audio/{engine,mixer,musicDirector,sfx}.ts</code> — Web Audio graph + adaptive stem director.</li>
-    <li><code>tools/pipeline/{tripo,comfy,blenderMcp,elevenlabs,openaiImage}.ts</code> — build-time generators.</li>
+    <li><code>tools/pipeline/{comfy,trellis,images,blenderMcp,elevenlabs}.ts</code> — build-time generators, local-first (see the tool-priority ladder in Solution).</li>
+    <li><code>tools/pipeline/approvalGate.ts</code> — enforces per-use operator approval for the paid rungs (Tripo3D, OpenAI images).</li>
+    <li><code>tools/pipeline/tripo.ts</code> — <b>approval-gated</b> Tripo3D client; only reachable through <code>approvalGate</code>, never called directly.</li>
     <li><code>tools/pipeline/optimize.ts</code> — gltf-transform: Draco/meshopt, KTX2, LOD emit, budget report.</li>
     <li><code>tools/pipeline/manifest.json</code> — per-asset provenance: tool, prompt, seed, params, licence, hash.</li>
     <li><code>public/assets/{ships,stations,textures,skybox,audio}/</code> — the committed static output.</li>
@@ -358,23 +394,29 @@ figure:has(img) .fig-pending { display: none; }
     <h3>Phase 2 — AI asset &amp; audio pipeline spike (end-to-end, one of each) <code class="status">[]</code></h3>
     <p>De-risk the entire art strategy early by pushing exactly one asset of each class all the way through the
        pipeline and into the running build. Volume comes later; the <em>path</em> must be proven now, because
-       if Tripo3D output cannot be normalised into a game-ready GLB, the art plan changes and every later
-       phase's estimates change with it.</p>
+       if <b>local ComfyUI + TRELLIS2</b> output cannot be normalised into a game-ready GLB <em>within 12 GB
+       of VRAM</em>, the art plan changes and every later phase's estimates change with it. That is the single
+       question this phase exists to answer.</p>
     <h4>Tasks</h4>
     <ul class="checklist">
-      <li><code class="status">[]</code> <code>tools/pipeline/openaiImage.ts</code>: concept-art pass — orthographic ship views from a prompt, saved as pipeline inputs.</li>
-      <li><code class="status">[]</code> <code>tools/pipeline/tripo.ts</code>: text-to-3D and image-to-3D calls, polling, GLB download, retry/backoff, credit-usage logging.</li>
-      <li><code class="status">[]</code> <code>tools/pipeline/blenderMcp.ts</code>: connect to Blender MCP on <code>:9876</code> — import, decimate to target tri-count, generate LOD0/1/2, normalise scale + pivot + forward axis, build a convex collision proxy, export GLB.</li>
-      <li><code class="status">[]</code> <code>tools/pipeline/comfy.ts</code>: ComfyUI workflow submission for (a) a PBR texture set and (b) a 6-face nebula skybox cubemap; seed and workflow JSON recorded per output.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/comfy.ts</code>: the primary generator client — ComfyUI workflow submission, queue polling, output retrieval, seed + workflow-JSON recorded per output. Covers BOTH image and 3D graphs.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/trellis.ts</code>: the TRELLIS2 3D graph driven through ComfyUI — image-to-3D and/or text-to-3D producing a raw mesh. <b>Must be built for 12 GB VRAM from the start:</b> strictly sequential jobs, explicit VRAM teardown between them, low-VRAM/model-offload mode, conservative latent and output resolution, and an OOM path that fails loudly with the settings that were in effect rather than silently degrading.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/blenderMcp.ts</code>: connect to Blender MCP on <code>:9876</code> — import, decimate to target tri-count, generate LOD0/1/2, normalise scale + pivot + forward axis, build a convex collision proxy, export GLB. This is where raw TRELLIS2 output becomes game-ready.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/images.ts</code>: image generation behind ONE interface with the priority ladder built in — ComfyUI first; <code>agy</code> CLI (Gemini) as the quality fallback; OpenAI only behind an explicit approval gate. Concept art, PBR sets, skybox faces and UI art all route through it.</li>
+      <li><code class="status">[]</code> <code>tools/pipeline/approvalGate.ts</code>: the mechanism enforcing "paid APIs need explicit per-use approval". A gated tool cannot run without a fresh recorded approval — no standing consent, no env var that quietly disables it, and every gated invocation logged to the manifest with what was approved and when.</li>
       <li><code class="status">[]</code> <code>tools/pipeline/elevenlabs.ts</code>: SFX generation (engine hum loop, pulse cannon, mining laser, explosion) and music stem generation.</li>
       <li><code class="status">[]</code> <code>tools/pipeline/optimize.ts</code>: gltf-transform — meshopt/Draco, KTX2 texture compression, per-asset budget report that fails the build when exceeded.</li>
-      <li><code class="status">[]</code> <code>manifest.json</code> provenance record per asset: tool, prompt, seed, parameters, output hash, licence note.</li>
+      <li><code class="status">[]</code> <code>manifest.json</code> provenance record per asset: <b>which rung of the ladder produced it</b>, tool, model, prompt, seed, parameters, output hash, peak VRAM, licence note.</li>
       <li><code class="status">[]</code> Ship the first real hull (Kestrel), first station module, first skybox and first four SFX into the Phase-1 scene.</li>
-      <li><code class="status">[]</code> Write <code>docs/PIPELINE.md</code> — how to regenerate any asset from scratch, and the explicit rule that runtime never calls these tools.</li>
+      <li><code class="status">[]</code> Write <code>docs/PIPELINE.md</code> — the tool-priority ladder and its rationale, the working TRELLIS2 settings for 12 GB, how to regenerate any asset from scratch, and the explicit rule that runtime never calls these tools.</li>
+      <li><code class="status">[]</code> Write <code>docs/verification/phase-2-capture.md</code> — the on-disk source of truth for this phase's measurements (peak VRAM per job kind, generation wall-clock, tri-counts, texture sizes, bundle totals). Phase 1 learned this the hard way; do not leave it to the end.</li>
     </ul>
     <h4>Testing strategy — loop until every check passes before advancing</h4>
     <ul class="checklist">
       <li><code class="status">[]</code> Generated Kestrel GLB loads, is correctly scaled and oriented, &le;15k triangles at LOD0, with working LOD switching.</li>
+      <li><code class="status">[]</code> <b>The 12 GB question, answered with numbers:</b> a full TRELLIS2 hull job completes on the RTX 3080 Ti with measured peak VRAM recorded, and the working settings are written down. If it cannot fit, say so explicitly and escalate for a Tripo3D approval decision rather than quietly lowering quality until something fits.</li>
+      <li><code class="status">[]</code> <b>Approval gate actually gates:</b> attempting a Tripo3D or OpenAI call without a recorded approval FAILS the pipeline. Verify by trying it — a gate that has never been observed refusing is not known to work.</li>
+      <li><code class="status">[]</code> Every artifact's manifest entry names the ladder rung that produced it; no asset has an unattributed origin.</li>
       <li><code class="status">[]</code> Full asset bundle for the slice projects under a 30&nbsp;MB budget; the budget check fails CI when exceeded (verify by deliberately breaching it).</li>
       <li><code class="status">[]</code> Pipeline is reproducible: re-running a manifest entry regenerates an equivalent asset, or the non-determinism is documented and the artifact is treated as immutable.</li>
       <li><code class="status">[]</code> <b>Offline test — the load-bearing one:</b> production build served with all AI endpoints unreachable and ComfyUI/Blender not running boots and plays identically.</li>
@@ -720,10 +762,17 @@ figure:has(img) .fig-pending { display: none; }
     <li><b>Assumption:</b> Desktop browser is the target; mobile/touch is explicitly out of scope for the slice.
         — <b>Why it matters:</b> mobile changes the control scheme, the UI layout and the entire quality-tier
         floor. — <b>Resolved:</b> <code class="status">[]</code> open</li>
-    <li><b>Assumption:</b> Tripo3D output can be normalised into game-ready hulls via Blender-MCP cleanup at
+    <li><b>SUPERSEDED 2026-07-27</b> (see Amendments — tool priority is now local-first, so this question is
+        now asked of TRELLIS2, not Tripo3D). <s><b>Assumption:</b> Tripo3D output can be normalised into game-ready hulls via Blender-MCP cleanup at
         acceptable quality. — <b>Why it matters:</b> if not, ship art falls back to kitbashed procedural
-        geometry or purchased packs, and Phase 2 gains a week. — <b>Resolved:</b> <code class="status">[]</code> open
-        (this is precisely what the Phase-2 spike answers)</li>
+        geometry or purchased packs, and Phase 2 gains a week.</s> — <b>Resolved:</b>
+        <code class="status" data-st="x">[x]</code> superseded by the 2026-07-27 amendment</li>
+    <li><b>Assumption:</b> TRELLIS2 running locally in ComfyUI can produce hull meshes that Blender-MCP cleanup
+        turns into game-ready GLBs, <em>within 12 GB of VRAM on an RTX 3080 Ti</em>. — <b>Why it matters:</b> this
+        is now the load-bearing art assumption. If the model cannot fit, or its output cannot be retopologised to
+        an acceptable standard, the options are an approval-gated Tripo3D fallback, kitbashed procedural geometry,
+        or purchased packs — and Phase 2 gains time in every case. — <b>Resolved:</b>
+        <code class="status">[]</code> open (this is precisely what the Phase-2 spike answers)</li>
     <li><b>Assumption:</b> Generated assets from these tools are licensed for the intended use (including any
         commercial release). — <b>Why it matters:</b> a licence problem discovered post-launch is far more
         expensive than one discovered in Phase 2; the manifest records provenance for exactly this reason. —
@@ -1012,6 +1061,48 @@ figure:has(img) .fig-pending { display: none; }
       <b>If rejected:</b> the alternative is option (a) above (a depth-writing occluder near the sun on
       screen), which requires operator-verified real-GPU placement before it can be judged to have
       actually produced shafts — it cannot be attempted honestly as a blind, unverified change.</p>
+  </details>
+
+  <details class="amend">
+    <summary>2026-07-27 — Asset-pipeline tool priority: local-first, paid APIs approval-gated (pre-Phase-2)</summary>
+    <p><b>Changed by:</b> operator directive, recorded before Phase 2 begins so the phase is built to the
+      revised policy rather than retrofitted to it.</p>
+    <p><b>What changed.</b> The original plan named Tripo3D as the 3D generator and OpenAI images as the
+      concept-art pass, with local ComfyUI limited to textures and skyboxes. That ordering is inverted:</p>
+    <ul>
+      <li><b>3D meshes:</b> <b>local ComfyUI running TRELLIS2 is now primary.</b> The Tripo3D API drops to a
+        fallback that may only be used with <b>explicit per-use operator approval</b>.</li>
+      <li><b>Images:</b> <b>local ComfyUI is now preferred.</b> The <code>agy</code> CLI (Gemini) is the
+        fallback when higher fidelity is genuinely needed. The OpenAI image API drops to
+        <b>explicit per-use operator approval only</b>.</li>
+      <li><b>Unchanged:</b> ElevenLabs for audio; Blender MCP on <code>:9876</code> for all mesh cleanup,
+        LODs, collision proxies and GLB export.</li>
+    </ul>
+    <p><b>Why.</b> Local generation is free, private, unmetered and reproducible; metered APIs are none of
+      those. A pipeline whose default path costs money per asset quietly discourages iteration, which is
+      exactly backwards for a phase whose whole purpose is trying things. Approval is required
+      <em>per use</em> rather than once — standing consent to spend is not consent to spend repeatedly.</p>
+    <p><b>New hard constraint: 12 GB VRAM.</b> TRELLIS2 must run on a single RTX 3080 Ti. This is a design
+      input, not a footnote — sequential jobs only, explicit VRAM teardown between them, low-VRAM/offload
+      mode, conservative latent and output resolution, and a loud failure path on OOM. Phase 2 must
+      establish and record the actual working settings and measured peak VRAM per job kind. <b>If TRELLIS2
+      genuinely cannot fit in 12 GB, the honest response is to escalate for a Tripo3D approval decision —
+      not to quietly lower quality until something fits.</b></p>
+    <p><b>Preserved invariants (N9).</b> The build boundary is untouched and remains the most important rule
+      in this plan: all generation happens at build time on the operator's machine, output is committed as
+      static files, and <b>the shipped game still makes zero AI API calls and runs fully offline</b>.
+      <code>pnpm verify:offline</code> remains the enforcing check. Asteroids remain procedural rather than
+      modelled. Every artifact still carries a provenance manifest entry — now additionally recording which
+      rung of the priority ladder produced it, and its peak VRAM.</p>
+    <p><b>Changed behaviors.</b> Solution section gained the tool-priority ladder table and the VRAM
+      constraint; Phase 2's task list and testing strategy were rewritten around ComfyUI/TRELLIS2 with two
+      new checks (the 12 GB question answered with numbers, and a demonstrated-refusing approval gate);
+      <code>tools/pipeline/</code> gains <code>trellis.ts</code>, <code>images.ts</code> and
+      <code>approvalGate.ts</code>, <code>openaiImage.ts</code> is absorbed into <code>images.ts</code>, and
+      <code>tripo.ts</code> survives only as an approval-gated client that is never called directly.</p>
+    <p><b>Questionable now resolved.</b> The open assumption "Tripo3D output can be normalised into
+      game-ready hulls via Blender-MCP cleanup" is superseded — the equivalent question is now asked of
+      TRELLIS2 output, and answering it is precisely what the Phase 2 spike exists to do.</p>
   </details>
 </section>
 
